@@ -3,43 +3,35 @@
 
 MenuManager::MenuManager(sf::Font& font) : mainFont(font) {}
 
-void MenuManager::createButton(const std::string& btnText, sf::Vector2f position, std::function<void()> action) {
-    // POPRAWKA DLA SFML 3: Wywo³ujemy konstruktor Button, podaj¹c czcionkê
+void MenuManager::clearButtons() {
+    activeButtons.clear();
+}
+
+void MenuManager::addButton(const std::string& btnText, sf::Vector2f position, std::function<void()> action) {
     Button btn(mainFont);
 
     btn.text.setString(btnText);
     btn.text.setCharacterSize(50);
     btn.text.setFillColor(sf::Color::White);
+
+    // POPRAWKA SFML 3: U¿ywamy position.x i size.x zamiast left i width (C2039)
+    sf::FloatRect textBounds = btn.text.getLocalBounds();
+    btn.text.setOrigin({ textBounds.position.x + textBounds.size.x / 2.0f, textBounds.position.y + textBounds.size.y / 2.0f });
     btn.text.setPosition(position);
 
-    btn.background.setSize(sf::Vector2f(250.f, 60.f));
+    btn.background.setSize(sf::Vector2f(350.f, 60.f));
     btn.background.setFillColor(sf::Color(50, 50, 50, 200));
     btn.background.setOutlineThickness(2.f);
     btn.background.setOutlineColor(sf::Color::White);
 
-    // POPRAWKA DLA SFML 3: Funkcja setPosition wymaga teraz jednego obiektu sf::Vector2f. 
-    // Zamykamy dwa argumenty w nawiasy klamrowe {}, aby niejawnie stworzyæ wektor.
-    btn.background.setPosition({ position.x - 25.f, position.y - 5.f });
+    // POPRAWKA SFML 3: U¿ywamy position.x i size.x zamiast left i width (C2039)
+    sf::FloatRect bgBounds = btn.background.getLocalBounds();
+    btn.background.setOrigin({ bgBounds.position.x + bgBounds.size.x / 2.0f, bgBounds.position.y + bgBounds.size.y / 2.0f });
+    btn.background.setPosition(position);
 
     btn.onClick = action;
 
     activeButtons.push_back(btn);
-}
-
-void MenuManager::initMenu(GameState state, std::function<void(GameState)> stateChanger, std::function<void()> closeApp) {
-    activeButtons.clear();
-
-    sf::VideoMode desktopMode = sf::VideoMode::getDesktopMode();
-    float centerX = desktopMode.size.x / 2.0f - 100.f;
-
-    // POPRAWKA: Tworzymy przyciski TYLKO dla menu g³ównego (MAIN_MENU), a nie dla ekranu logowania
-    if (state == GameState::MAIN_MENU) {
-        createButton("Graj", { centerX, 360.f }, [stateChanger]() {
-            stateChanger(GameState::GAMEPLAY);
-            });
-
-        createButton("Wyjscie", { centerX, 460.f }, closeApp);
-    }
 }
 
 void MenuManager::update(sf::Vector2f mousePos) {

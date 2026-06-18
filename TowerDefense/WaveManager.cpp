@@ -4,18 +4,27 @@
 #include <chrono>
 
 WaveManager::WaveManager()
-    : currentWave(0), isLoading(false), isWaveRunning(false), spawnTimer(0.f), enemiesToSpawn(0) {
+    : currentWave(0), totalWaves(10), difficultyLevel(0), isLoading(false), isWaveRunning(false), spawnTimer(0.f), enemiesToSpawn(0) {
 }
 
 WaveManager::~WaveManager() {
-    // Upewniamy siê, ¿e w¹tek ³adowania zakoñczy pracê przed zniszczeniem obiektu
     if (waveLoaderFuture.valid()) {
         waveLoaderFuture.wait();
     }
 }
 
-void WaveManager::setPath(const std::vector<sf::Vector2f>& newPath) {
+void WaveManager::reset() {
+    std::lock_guard<std::mutex> lock(waveMutex);
+    activeEnemies.clear();
+    currentWave = 0;
+    isWaveRunning = false;
+    enemiesToSpawn = 0;
+}
+
+void WaveManager::setMapData(const std::vector<sf::Vector2f>& newPath, int totalWvs, int difficulty) {
     pathPoints = newPath;
+    totalWaves = totalWvs;
+    difficultyLevel = difficulty;
 }
 
 void WaveManager::loadWaveDataAsync() {
@@ -24,54 +33,92 @@ void WaveManager::loadWaveDataAsync() {
     isLoading = true;
     std::cout << "Rozpoczynam asynchroniczne ladowanie fali: " << currentWave + 1 << "...\n";
 
-    // Odpalamy zadanie w tle (np. wczytywanie skomplikowanych danych XML/JSON mapy)
     waveLoaderFuture = std::async(std::launch::async, [this]() {
-        // Symulacja d³ugiego ³adowania (np. odczyt plików)
-        std::this_thread::sleep_for(std::chrono::milliseconds(1500));
-
-        // Blokujemy mutex, by bezpiecznie zmodyfikowaæ zmienne
+        std::this_thread::sleep_for(std::chrono::milliseconds(800)); // L¿ejsza symulacja na potrzeby testów
         std::lock_guard<std::mutex> lock(waveMutex);
-        // UWAGA: Nie ustawiamy tutaj wrogów. Zrobi to startNextWave po klikniêciu spacji.
-
         std::cout << "Fala " << currentWave + 1 << " zaladowana pomyslnie!\n";
         isLoading = false;
         });
 }
 
 void WaveManager::startNextWave() {
-    if (isLoading) {
-        std::cout << "Czekaj, dane fali wciaz sie laduja...\n";
+    if (isLoading || isWaveRunning || currentWave >= totalWaves) {
         return;
-    }
-
-    if (isWaveRunning) {
-        return; // Zabezpieczenie przed wielokrotnym wciskaniem spacji, gdy fala ju¿ trwa
     }
 
     std::lock_guard<std::mutex> lock(waveMutex);
     isWaveRunning = true;
     currentWave++;
     spawnTimer = 0.f;
-    enemiesToSpawn = 10 + (currentWave * 5); // Ustalenie wrogów dopiero w momencie startu po klikniêciu
-    std::cout << "FALA " << currentWave << " WYSTARTOWALA!\n";
+    enemiesToSpawn = 10 + (currentWave * 5);
 }
 
 void WaveManager::updateEnemies(float dt, PlayerStats& playerStats) {
-    if (!isWaveRunning) return; // Jeœli fala pauzuje (czekamy na spacjê), zatrzymujemy logikê
+    if (!isWaveRunning) return;
 
-    // --- 1. SPRAWANIE WROGÓW ---
+    // --- SPAWNOWANIE WROGÓW ZE ZMIENIONYM BALANSEM MAP ---
     if (enemiesToSpawn > 0) {
         spawnTimer += dt;
-        if (spawnTimer >= 1.0f) { // Co sekundê pojawia siê nowy Goblin
+        if (spawnTimer >= 1.0f) {
             std::lock_guard<std::mutex> lock(waveMutex);
 
             sf::Vector2f startPos = pathPoints.empty() ? sf::Vector2f(0.f, 0.f) : pathPoints.front();
-            auto newEnemy = std::make_unique<Goblin>(startPos);
+            std::unique_ptr<Enemy> newEnemy;
 
-            // Konfiguracja callbacku na œmieræ (dodaje z³oto i punkty)
+            if (enemiesToSpawn == 1 && currentWave % 5 == 0) {
+                newEnemy = std::make_unique<BossEnemy>(startPos); // Boss zawsze na koniec fali podzielnej przez 5
+            }
+            else {
+                int roll = enemiesToSpawn % 10;
+
+                // SKALOWANIE DLA TRUDNEJ MAPY (Ciê¿cy wrogowie od pocz¹tku)
+                if (difficultyLevel == 2) {
+                    if (currentWave >= 10) {
+                        if (roll <= 2) newEnemy = std::make_unique<BossEnemy>(startPos); // Mini bossy!
+                        else if (roll <= 5) newEnemy = std::make_unique<TankEnemy>(startPos);
+                        else newEnemy = std::make_unique<MaskedEnemy>(startPos);
+                    }
+                    else if (currentWave >= 5) {
+                        if (roll <= 3) newEnemy = std::make_unique<TankEnemy>(startPos);
+                        else if (roll <= 6) newEnemy = std::make_unique<ArmoredEnemy>(startPos);
+                        else newEnemy = std::make_unique<FastEnemy>(startPos);
+                    }
+                    else {
+                        if (roll <= 4) newEnemy = std::make_unique<ArmoredEnemy>(startPos);
+                        else newEnemy = std::make_unique<FastEnemy>(startPos);
+                    }
+                }
+                // SKALOWANIE DLA ŒREDNIEJ MAPY (Balans standardowy)
+                else if (difficultyLevel == 1) {
+                    if (currentWave >= 8) {
+                        if (roll <= 1) newEnemy = std::make_unique<TankEnemy>(startPos);
+                        else if (roll <= 4) newEnemy = std::make_unique<MaskedEnemy>(startPos);
+                        else newEnemy = std::make_unique<FastEnemy>(startPos);
+                    }
+                    else if (currentWave >= 4) {
+                        if (roll <= 3) newEnemy = std::make_unique<ArmoredEnemy>(startPos);
+                        else newEnemy = std::make_unique<Goblin>(startPos);
+                    }
+                    else {
+                        newEnemy = std::make_unique<Goblin>(startPos);
+                    }
+                }
+                // SKALOWANIE DLA £ATWEJ MAPY (Spokojna rozgrywka)
+                else {
+                    if (currentWave >= 8) {
+                        if (roll <= 2) newEnemy = std::make_unique<ArmoredEnemy>(startPos);
+                        else if (roll <= 4) newEnemy = std::make_unique<FastEnemy>(startPos);
+                        else newEnemy = std::make_unique<Goblin>(startPos);
+                    }
+                    else {
+                        newEnemy = std::make_unique<Goblin>(startPos); // Tylko gobliny przez d³ugi czas
+                    }
+                }
+            }
+
             newEnemy->setOnDeathCallback([&playerStats](int points) {
                 playerStats.addReward(points);
-                playerStats.gold += points; // Zak³adamy, ¿e points = gold dla prostoty
+                playerStats.gold += points;
                 });
 
             activeEnemies.push_back(std::move(newEnemy));
@@ -80,32 +127,25 @@ void WaveManager::updateEnemies(float dt, PlayerStats& playerStats) {
         }
     }
 
-    // --- 2. AKTUALIZACJA I RUCH ---
     for (auto& enemy : activeEnemies) {
         enemy->moveAlongPath(pathPoints, dt);
         enemy->update(dt);
-
-        // Jeœli wróg doszed³ do koñca œcie¿ki
         if (enemy->hasReachedEnd(pathPoints)) {
             playerStats.takeDamage(enemy->getDamageToBase());
-            enemy->takeDamage(9999); // Zabijamy wroga (wpad³ do bazy)
+            enemy->takeDamage(99999, DamageType::CANNON);
         }
     }
 
-    // --- 3. USUWANIE MARTWYCH WROGÓW (Modern C++ idiom) ---
-    // U¿ywamy std::erase_if (C++20), co jest mega zoptymalizowane
     std::erase_if(activeEnemies, [](const std::unique_ptr<Enemy>& enemy) {
         return enemy->isDead();
         });
 
-    // --- 4. SPRAWDZANIE KOÑCA FALI ---
     if (enemiesToSpawn <= 0 && activeEnemies.empty()) {
-        isWaveRunning = false; // Fala siê skoñczy³a. Oczekujemy na kolejne klikniêcie spacji.
+        isWaveRunning = false;
     }
 }
 
 void WaveManager::drawEnemies(sf::RenderWindow& window) {
-    // Chronimy dostêp na wypadek asynchronicznoœci
     std::lock_guard<std::mutex> lock(waveMutex);
     for (const auto& enemy : activeEnemies) {
         enemy->draw(window);
@@ -113,5 +153,5 @@ void WaveManager::drawEnemies(sf::RenderWindow& window) {
 }
 
 bool WaveManager::isWaveActive() const {
-    return isWaveRunning; // Decyduje czy wyœwietliæ tekst "Wciœnij spacjê" w HUD
+    return isWaveRunning;
 }

@@ -6,7 +6,7 @@
 class PlayerStats {
 public:
     std::string nickname = "";
-    int gold = 500;
+    int gold = 900;
     int score = 0;
     int baseHealth = 100;
     int maxBaseHealth = 100;

@@ -5,12 +5,12 @@
 #include <string>
 #include <vector>
 #include <memory>
-#include <format> // C++20 do wygodnego formatowania stringów
+#include <format>
 #include "PlayerStats.h"
 #include "MenuMenager.h" 
 #include "WaveManager.h" 
-#include "Tower.h" // DODANE: Nag³ówek wie¿
-#include "Projectile.h" // DODANE: Nag³ówek pocisków
+#include "Tower.h" 
+#include "Projectile.h" 
 
 enum class GameState {
     LOGIN,
@@ -20,14 +20,24 @@ enum class GameState {
     GAME_OVER
 };
 
+// Po³¹czona, pojedyncza definicja struktury LevelMap
+struct LevelMap {
+    std::string name;
+    std::vector<sf::Vector2f> path;
+    std::vector<sf::RectangleShape> obstacles;
+    int totalWaves = 0; // POPRAWKA: Inicjalizacja zmiennej (C26495)
+    int difficulty = 0; // 0 - Easy, 1 - Med, 2 - Hard
+    sf::Color bgColor;
+    sf::Color pathColor;
+};
+
 struct ShopButton {
     sf::RectangleShape rect;
     sf::Text text;
     sf::Text costText;
-    int cost = 0; // POPRAWKA: Inicjalizacja zmiennej naprawiaj¹ca ostrze¿enie C26495
+    int cost = 0;
     std::string towerName;
 
-    // SFML 3: sf::Text wymaga czcionki w konstruktorze
     ShopButton(const sf::Font& font) : text(font), costText(font) {}
 };
 
@@ -37,15 +47,15 @@ public:
     void run();
 
 private:
+    void initMaps(); // Funkcja tworz¹ca mapy
     void handleEvents();
     void update(float dt);
     void render();
     void changeState(GameState newState);
+    void startGame(int mapIndex); // Uruchomienie wybranej mapy
 
-    // NOWE: Funkcja weryfikuj¹ca czy mo¿na postawiæ wie¿ê na danej pozycji
     bool canPlaceTower(sf::Vector2f pos);
 
-    // Nowe funkcje do obs³ugi interfejsu
     void initGameplayHUD();
     void drawGameplayHUD();
     void handleGameplayClicks(sf::Vector2f mousePos, sf::Mouse::Button button);
@@ -58,7 +68,10 @@ private:
     MenuManager menuManager;
     WaveManager waveManager;
 
-    std::vector<sf::Vector2f> testPath;
+    std::vector<LevelMap> availableMaps;
+    int currentMapIndex = 0;
+    bool hasWon = false; // Przechowuje informacjê o zwyciêstwie
+
     sf::VertexArray pathLines;
 
     sf::Texture backgroundTexture;
@@ -71,22 +84,16 @@ private:
     sf::Text errorText;
     std::string currentInput;
     sf::RectangleShape inputBox;
-    sf::Text welcomeText;
 
-    // --- ELEMENTY HUD W GRZE ---
-    sf::RectangleShape hudSidebar;       // T³o panelu bocznego
-    sf::Text statsText;                  // Tekst wyœwietlaj¹cy HP, Gold, Falê
-    sf::Text shopTitleText;              // Napis "MENU BUDOWY"
-    std::vector<ShopButton> shopButtons; // Przyciski wie¿
+    sf::RectangleShape hudSidebar;
+    sf::Text statsText;
+    sf::Text shopTitleText;
+    std::vector<ShopButton> shopButtons;
 
-    // --- MECHANIKA BUDOWANIA ---
-    bool isPlacingTower = false;         // Czy gracz aktualnie trzyma wie¿ê w kursorze?
+    bool isPlacingTower = false;
     int selectedTowerIndex = -1;
-    sf::RectangleShape ghostTower;       // Pó³przezroczysty kwadrat pokazuj¹cy gdzie postawimy wie¿ê
+    sf::RectangleShape ghostTower;
 
-    // Kontener przechowuj¹cy wszystkie postawione na mapie wie¿e
     std::vector<std::unique_ptr<Tower>> activeTowers;
-
-    // DODANE: Kontener przechowuj¹cy wszystkie aktywne pociski w powietrzu
     std::vector<std::unique_ptr<Projectile>> activeProjectiles;
 };

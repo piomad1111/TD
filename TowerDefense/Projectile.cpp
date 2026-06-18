@@ -1,11 +1,13 @@
 #include "Projectile.h"
 #include <cmath>
 
-Projectile::Projectile(sf::Vector2f startPos, sf::Vector2f tPos, float spd, int dmg, float splash, sf::Color color)
-    : targetPos(tPos), speed(spd), damage(dmg), splashRadius(splash), reachedTarget(false)
+Projectile::Projectile(sf::Vector2f startPos, sf::Vector2f tPos, float spd, int dmg, float splash, sf::Color color, ProjectileEffect eff, DamageType dType)
+    : targetPos(tPos), speed(spd), damage(dmg), splashRadius(splash), reachedTarget(false), effect(eff), dmgType(dType)
 {
     position = startPos;
+
     // Dopasowanie rozmiaru w zale¿noœci od tego, czy pocisk ma obra¿enia obszarowe (np. Armata)
+    // TUTEJ BRAKOWA£O TEJ LINIJKI:
     float radius = (splash > 20.f) ? 8.f : 4.f;
 
     shape.setRadius(radius);

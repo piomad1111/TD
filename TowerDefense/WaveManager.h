@@ -10,13 +10,16 @@
 class WaveManager {
 private:
     int currentWave;
-    std::vector<std::unique_ptr<Enemy>> activeEnemies;
-    std::vector<sf::Vector2f> pathPoints; // Œcie¿ka, po której id¹ wrogowie
+    int totalWaves; // NOWE: Iloœæ fal potrzebnych do wygranej
+    int difficultyLevel; // NOWE: Poziom trudnoœci (0 - £atwy, 1 - Œredni, 2 - Trudny)
 
-    std::mutex waveMutex; // Do synchronizacji przy asynchronicznym ³adowaniu
-    std::future<void> waveLoaderFuture; // Przechowuje asynchroniczne zadanie
+    std::vector<std::unique_ptr<Enemy>> activeEnemies;
+    std::vector<sf::Vector2f> pathPoints;
+
+    std::mutex waveMutex;
+    std::future<void> waveLoaderFuture;
     bool isLoading;
-    bool isWaveRunning; // POPRAWKA: Ta deklaracja jest konieczna, by usun¹æ b³êdy C2065 i C2614
+    bool isWaveRunning;
 
     float spawnTimer;
     int enemiesToSpawn;
@@ -25,22 +28,20 @@ public:
     WaveManager();
     ~WaveManager();
 
-    // Inicjuje asynchroniczne wczytywanie danych o fali z plików/pamiêci
+    // NOWE: Metody zarz¹dzania cyklem gry
+    void reset();
+    void setMapData(const std::vector<sf::Vector2f>& newPath, int totalWvs, int difficulty);
+
     void loadWaveDataAsync();
-
-    // Ustawia œcie¿kê mapy
-    void setPath(const std::vector<sf::Vector2f>& newPath);
-
     void startNextWave();
 
-    // G³ówna pêtla fali
     void updateEnemies(float dt, PlayerStats& playerStats);
     void drawEnemies(sf::RenderWindow& window);
 
     bool isWaveActive() const;
     int getCurrentWave() const { return currentWave; }
+    int getTotalWaves() const { return totalWaves; }
 
-    // Getter zwracaj¹cy wrogów, wymagany do namierzania przez wie¿e
     const std::vector<std::unique_ptr<Enemy>>& getEnemies() const {
         return activeEnemies;
     }
