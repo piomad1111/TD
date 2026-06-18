@@ -1,7 +1,7 @@
 #pragma once
 #include "GameObject.h"
 #include <SFML/Graphics.hpp>
-#include "Enemy.h" // DODANE: Wymagane, aby kompilator rozpozna³ DamageType
+#include "Enemy.h" // DODANE: Wymagane, aby kompilator rozpozna  DamageType
 
 enum class ProjectileEffect { NONE, SLOW, POISON };
 
@@ -12,9 +12,11 @@ private:
     int damage;
     float splashRadius;
     bool reachedTarget;
+
     sf::CircleShape shape;
+
     ProjectileEffect effect;
-    DamageType dmgType; // Typ obra¿eñ zadawanych przez pocisk
+    DamageType dmgType; // Typ obra  zadawanych przez pocisk
 
 public:
     Projectile(sf::Vector2f startPos, sf::Vector2f tPos, float spd, int dmg, float splash, sf::Color color, ProjectileEffect eff = ProjectileEffect::NONE, DamageType dType = DamageType::NORMAL);

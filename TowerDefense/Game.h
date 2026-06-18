@@ -20,13 +20,12 @@ enum class GameState {
     GAME_OVER
 };
 
-// Po³¹czona, pojedyncza definicja struktury LevelMap
 struct LevelMap {
     std::string name;
     std::vector<sf::Vector2f> path;
     std::vector<sf::RectangleShape> obstacles;
-    int totalWaves = 0; // POPRAWKA: Inicjalizacja zmiennej (C26495)
-    int difficulty = 0; // 0 - Easy, 1 - Med, 2 - Hard
+    int totalWaves = 0;
+    int difficulty = 0;
     sf::Color bgColor;
     sf::Color pathColor;
 };
@@ -39,6 +38,10 @@ struct ShopButton {
     std::string towerName;
 
     ShopButton(const sf::Font& font) : text(font), costText(font) {}
+    ShopButton(ShopButton&&) = default;
+    ShopButton& operator=(ShopButton&&) = default;
+    ShopButton(const ShopButton&) = delete;
+    ShopButton& operator=(const ShopButton&) = delete;
 };
 
 class Game {
@@ -47,15 +50,13 @@ public:
     void run();
 
 private:
-    void initMaps(); // Funkcja tworz¹ca mapy
+    void initMaps();
     void handleEvents();
     void update(float dt);
     void render();
     void changeState(GameState newState);
-    void startGame(int mapIndex); // Uruchomienie wybranej mapy
-
+    void startGame(int mapIndex);
     bool canPlaceTower(sf::Vector2f pos);
-
     void initGameplayHUD();
     void drawGameplayHUD();
     void handleGameplayClicks(sf::Vector2f mousePos, sf::Mouse::Button button);
@@ -70,7 +71,7 @@ private:
 
     std::vector<LevelMap> availableMaps;
     int currentMapIndex = 0;
-    bool hasWon = false; // Przechowuje informacjê o zwyciêstwie
+    bool hasWon = false;
 
     sf::VertexArray pathLines;
 

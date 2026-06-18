@@ -9,12 +9,10 @@ void MenuManager::clearButtons() {
 
 void MenuManager::addButton(const std::string& btnText, sf::Vector2f position, std::function<void()> action) {
     Button btn(mainFont);
-
     btn.text.setString(btnText);
     btn.text.setCharacterSize(50);
     btn.text.setFillColor(sf::Color::White);
-
-    // POPRAWKA SFML 3: U¿ywamy position.x i size.x zamiast left i width (C2039)
+    // POPRAWKA SFML 3: U ywamy position.x i size.x zamiast left i width (C2039)
     sf::FloatRect textBounds = btn.text.getLocalBounds();
     btn.text.setOrigin({ textBounds.position.x + textBounds.size.x / 2.0f, textBounds.position.y + textBounds.size.y / 2.0f });
     btn.text.setPosition(position);
@@ -23,15 +21,13 @@ void MenuManager::addButton(const std::string& btnText, sf::Vector2f position, s
     btn.background.setFillColor(sf::Color(50, 50, 50, 200));
     btn.background.setOutlineThickness(2.f);
     btn.background.setOutlineColor(sf::Color::White);
-
-    // POPRAWKA SFML 3: U¿ywamy position.x i size.x zamiast left i width (C2039)
+    // POPRAWKA SFML 3: U ywamy position.x i size.x zamiast left i width (C2039)
     sf::FloatRect bgBounds = btn.background.getLocalBounds();
     btn.background.setOrigin({ bgBounds.position.x + bgBounds.size.x / 2.0f, bgBounds.position.y + bgBounds.size.y / 2.0f });
     btn.background.setPosition(position);
 
     btn.onClick = action;
-
-    activeButtons.push_back(btn);
+    activeButtons.push_back(std::move(btn));
 }
 
 void MenuManager::update(sf::Vector2f mousePos) {
@@ -52,6 +48,7 @@ void MenuManager::handleClick(sf::Vector2f mousePos) {
         if (btn.background.getGlobalBounds().contains(mousePos)) {
             if (btn.onClick) {
                 btn.onClick();
+                break; // PRZERWANIE PÊTLI - wektor móg³ zostaæ wyczyszczony przez onClick()!
             }
         }
     }

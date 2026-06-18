@@ -1,5 +1,6 @@
 #include "Enemy.h"
 #include <algorithm>
+#include <ranges>
 
 // --- KLASA BAZOWA ENEMY ---
 Enemy::Enemy(float startSpeed, int startHealth, int points, int damage)
@@ -49,21 +50,21 @@ void Enemy::applyPoison(int dps, float duration) {
 }
 
 void Enemy::update(float dt) {
-    // Zarz¹dzanie spowolnieniem
+    // Zarz dzanie spowolnieniem
     if (slowTimer > 0.f) {
         slowTimer -= dt;
         if (slowTimer <= 0.f) {
             speed = baseSpeed;
-            shape.setFillColor(originalColor); // Powrót do normy
+            shape.setFillColor(originalColor); // Powr t do normy
         }
     }
 
-    // Zarz¹dzanie trucizn¹
+    // Zarz dzanie trucizn
     if (poisonTimer > 0.f) {
         poisonTimer -= dt;
         poisonTickTimer += dt;
         if (poisonTickTimer >= 1.0f) {
-            takeDamage(poisonDps, DamageType::POISON); // Trucizna bije co sekundê
+            takeDamage(poisonDps, DamageType::POISON); // Trucizna bije co sekund
             poisonTickTimer = 0.f;
         }
         if (poisonTimer <= 0.f && slowTimer <= 0.f) {
@@ -73,6 +74,7 @@ void Enemy::update(float dt) {
 }
 
 bool Enemy::isDead() const { return health <= 0; }
+
 bool Enemy::hasReachedEnd(const std::vector<sf::Vector2f>& path) const {
     if (path.empty()) return true;
     return currentTargetPoint >= path.size();
@@ -80,6 +82,7 @@ bool Enemy::hasReachedEnd(const std::vector<sf::Vector2f>& path) const {
 
 void Enemy::moveAlongPath(const std::vector<sf::Vector2f>& path, float dt) {
     if (currentTargetPoint >= path.size()) return;
+
     sf::Vector2f target = path[currentTargetPoint];
     sf::Vector2f dir = target - position;
     float distance = std::sqrt(dir.x * dir.x + dir.y * dir.y);
@@ -105,7 +108,7 @@ void Enemy::draw(sf::RenderWindow& window) {
 }
 
 // ==========================================
-// --- IMPLEMENTACJE KONKRETNYCH WROGÓW ---
+// --- IMPLEMENTACJE KONKRETNYCH WROG W ---
 // ==========================================
 
 // 1. Goblin (Podstawowy)
@@ -114,17 +117,18 @@ Goblin::Goblin(sf::Vector2f startPos) : Enemy(100.f, 50, 10, 5) {
     originalColor = sf::Color::Green; shape.setFillColor(originalColor);
 }
 
-// 2. ArmoredEnemy (Zbroja odbijaj¹ca zwyk³e ciosy)
+// 2. ArmoredEnemy (Zbroja odbijaj ca zwyk e ciosy)
 ArmoredEnemy::ArmoredEnemy(sf::Vector2f startPos) : Enemy(70.f, 150, 25, 10) {
     position = startPos; shape.setPosition(position);
     originalColor = sf::Color(128, 128, 128); // Szary (Stal)
     shape.setFillColor(originalColor);
     shape.setOutlineThickness(3.f);
-    shape.setOutlineColor(sf::Color::White); // Bia³y pancerz wizualnie
+    shape.setOutlineColor(sf::Color::White); // Bia y pancerz wizualnie
 }
+
 void ArmoredEnemy::takeDamage(int damage, DamageType type) {
     if (!armorBroken) {
-        // Zbroja ³amie siê tylko od Armaty i Pioruna
+        // Zbroja  amie si  tylko od Armaty i Pioruna
         if (type == DamageType::CANNON || type == DamageType::LIGHTNING) {
             armorBroken = true;
             shape.setOutlineThickness(0.f); // Traci wizualny pancerz
@@ -133,52 +137,57 @@ void ArmoredEnemy::takeDamage(int damage, DamageType type) {
             Enemy::takeDamage(damage, type);
         }
         else if (type == DamageType::POISON) {
-            Enemy::takeDamage(damage, type); // Trucizna prze¿era pancerz
+            Enemy::takeDamage(damage, type); // Trucizna prze era pancerz
         }
         else {
-            // Strza³y i magia obijaj¹ siê od zbroi zadaj¹c tylko 1 dmg
+            // Strza y i magia obijaj  od zbroi zadaj c tylko 1 dmg
             Enemy::takeDamage(1, type);
         }
     }
     else {
-        Enemy::takeDamage(damage, type); // Pancerz zniszczony, pe³ne obra¿enia
+        Enemy::takeDamage(damage, type); // Pancerz zniszczony, pe ne obra enia
     }
 }
 
-// 3. MaskedEnemy (Niewidzialny dla wie¿, dopóki Radar/Mag go nie ujawni)
+// 3. MaskedEnemy (Niewidzialny dla wie , dop ki Radar/Mag go nie ujawni)
 MaskedEnemy::MaskedEnemy(sf::Vector2f startPos) : Enemy(130.f, 60, 20, 5) {
     position = startPos; shape.setPosition(position);
-    originalColor = sf::Color(50, 50, 50, 180); // Ciemny, pó³przezroczysty
+    originalColor = sf::Color(50, 50, 50, 180); // Ciemny, p przezroczysty
     shape.setFillColor(originalColor);
 }
+
 void MaskedEnemy::takeDamage(int damage, DamageType type) {
     if (type == DamageType::MAGIC && !maskBroken) {
-        maskBroken = true; // Magia na sta³e zrywa maskê!
+        maskBroken = true; // Magia na sta e zrywa mask
         originalColor = sf::Color(180, 0, 180);
         shape.setFillColor(originalColor);
         shape.setOutlineThickness(0.f);
     }
     Enemy::takeDamage(damage, type);
 }
+
 bool MaskedEnemy::isTargetable() const {
     return maskBroken || revealedByRadar;
 }
+
 void MaskedEnemy::setRevealed(bool revealed) {
     revealedByRadar = revealed;
     if (!maskBroken) {
         if (revealed) {
             shape.setOutlineThickness(2.f);
-            shape.setOutlineColor(sf::Color::Cyan); // B³êkitny obrys radaru
+            shape.setOutlineColor(sf::Color::Cyan); // B kitny obrys radaru
         }
         else {
             shape.setOutlineThickness(0.f);
         }
     }
 }
+
 void MaskedEnemy::update(float dt) {
     Enemy::update(dt);
-    revealedByRadar = false; // Reset radaru co klatkê (Radar wymusza true co update)
+    revealedByRadar = false; // Reset radaru co klatk  (Radar wymusza true co update)
 }
+
 
 // 4. BossEnemy (Wielki i powolny)
 BossEnemy::BossEnemy(sf::Vector2f startPos) : Enemy(40.f, 1500, 200, 50) {
@@ -188,12 +197,13 @@ BossEnemy::BossEnemy(sf::Vector2f startPos) : Enemy(40.f, 1500, 200, 50) {
     originalColor = sf::Color(139, 0, 0); // Bordowy boss
     shape.setFillColor(originalColor);
 
-    // Przesuniêcie paska zdrowia wy¿ej dla wiêkszego modelu
+    // Przesuni cie paska zdrowia wy ej dla wi kszego modelu
     healthBarBg.setOrigin({ 15.f, 35.f });
     healthBarFill.setOrigin({ 15.f, 35.f });
 }
 
-// 5. FastEnemy (Ma³y i niezwykle szybki)
+
+// 5. FastEnemy (Ma y i niezwykle szybki)
 FastEnemy::FastEnemy(sf::Vector2f startPos) : Enemy(250.f, 30, 10, 2) {
     position = startPos; shape.setPosition(position);
     shape.setRadius(10.f);
@@ -205,18 +215,19 @@ FastEnemy::FastEnemy(sf::Vector2f startPos) : Enemy(250.f, 30, 10, 2) {
     healthBarFill.setOrigin({ 15.f, 20.f });
 }
 
-// 6. TankEnemy (Czo³g, na którego super dzia³a trucizna)
+// 6. TankEnemy (Czo g, na kt rego super dzia a trucizna)
 TankEnemy::TankEnemy(sf::Vector2f startPos) : Enemy(55.f, 350, 40, 15) {
     position = startPos; shape.setPosition(position);
     shape.setRadius(20.f);
     shape.setOrigin({ 20.f, 20.f });
-    originalColor = sf::Color(139, 69, 19); // Br¹zowy 
+    originalColor = sf::Color(139, 69, 19); // Br zowy 
     shape.setFillColor(originalColor);
 
     healthBarBg.setOrigin({ 15.f, 30.f });
     healthBarFill.setOrigin({ 15.f, 30.f });
 }
+
 void TankEnemy::applyPoison(int dps, float duration) {
-    // Obrywa PODWÓJNIE mocno od trucizny przez d³u¿szy czas!
+    // Obrywa PODW JNIE mocno od trucizny przez d szy czas!
     Enemy::applyPoison(dps * 2, duration + 2.0f);
 }

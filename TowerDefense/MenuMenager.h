@@ -13,13 +13,18 @@ struct Button {
     std::function<void()> onClick;
 
     Button(const sf::Font& font) : text(font) {}
+    // Rule of 5 needed because sf::Text holds a reference to a font
+    Button(Button&&) = default;
+    Button& operator=(Button&&) = default;
+    Button(const Button&) = delete;
+    Button& operator=(const Button&) = delete;
 };
 
 class MenuManager {
 public:
     MenuManager(sf::Font& font);
 
-    // NOWE: Dynamiczne zarz¹dzanie przyciskami
+    // NOWE: Dynamiczne zarz dzanie przyciskami
     void clearButtons();
     void addButton(const std::string& text, sf::Vector2f position, std::function<void()> action);
 

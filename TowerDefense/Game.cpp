@@ -1,5 +1,5 @@
 #include "Game.h"
-#include <regex> 
+#include <regex>
 
 Game::Game()
     : currentState(GameState::LOGIN), menuManager(font), backgroundSprite(backgroundTexture),
@@ -12,6 +12,7 @@ Game::Game()
     if (!backgroundTexture.loadFromFile("bgBlue.jpg")) {
         std::cerr << "Blad wczytywania tekstury bgBlue.jpg!" << std::endl;
     }
+
     if (!font.openFromFile("Roboto-Black.ttf")) {
         std::cerr << "Blad wczytywania czcionki!" << std::endl;
     }
@@ -47,12 +48,12 @@ Game::Game()
 
     initGameplayHUD();
 
-    // Wymuszenie wygenerowania elementów menu dla aktualnego stanu
+    // Wymuszenie wygenerowania element w menu dla aktualnego stanu
     changeState(GameState::LOGIN);
 }
 
 void Game::initMaps() {
-    // MAPA £ATWA (10 fal)
+    // MAPA  ATWA (10 fal)
     LevelMap easy;
     easy.name = "Latwa (10 fal)";
     easy.path = { {-50.f, 200.f}, {300.f, 200.f}, {300.f, 600.f}, {800.f, 600.f}, {800.f, 300.f}, {1600.f, 300.f} };
@@ -61,15 +62,16 @@ void Game::initMaps() {
     easy.bgColor = sf::Color(34, 139, 34); // Zielony
     easy.pathColor = sf::Color(100, 100, 100, 150);
 
-    sf::RectangleShape obs1({ 200.f, 200.f }); // Przeszkoda na œrodku
+    sf::RectangleShape obs1({ 200.f, 200.f }); // Przeszkoda na  rodku
     obs1.setPosition({ 400.f, 300.f });
-    obs1.setFillColor(sf::Color(105, 105, 105)); // Kamieñ
+    obs1.setFillColor(sf::Color(105, 105, 105)); // Kamie
     obs1.setOutlineThickness(2.f);
     obs1.setOutlineColor(sf::Color::Black);
     easy.obstacles.push_back(obs1);
+
     availableMaps.push_back(easy);
 
-    // MAPA ŒREDNIA (15 fal)
+    // MAPA  REDNIA (15 fal)
     LevelMap medium;
     medium.name = "Srednia (15 fal)";
     medium.path = { {-50.f, 500.f}, {200.f, 500.f}, {200.f, 100.f}, {700.f, 100.f}, {700.f, 700.f}, {1200.f, 700.f}, {1200.f, 400.f}, {1600.f, 400.f} };
@@ -83,6 +85,7 @@ void Game::initMaps() {
     obs2.setFillColor(sf::Color(80, 80, 80));
     obs2.setOutlineThickness(2.f);
     obs2.setOutlineColor(sf::Color::Black);
+
     sf::RectangleShape obs3({ 200.f, 300.f });
     obs3.setPosition({ 900.f, 200.f });
     obs3.setFillColor(sf::Color(80, 80, 80));
@@ -91,7 +94,9 @@ void Game::initMaps() {
 
     medium.obstacles.push_back(obs2);
     medium.obstacles.push_back(obs3);
+
     availableMaps.push_back(medium);
+
 
     // MAPA TRUDNA (20 fal)
     LevelMap hard;
@@ -102,13 +107,13 @@ void Game::initMaps() {
     hard.bgColor = sf::Color(60, 60, 60); // Wulkaniczny / Ciemny
     hard.pathColor = sf::Color(200, 50, 0, 150);
 
-    sf::RectangleShape obs4({ 600.f, 400.f }); // Ogromna przeszkoda na œrodku
+    sf::RectangleShape obs4({ 600.f, 400.f }); // Ogromna przeszkoda na  rodku
     obs4.setPosition({ 350.f, 350.f });
     obs4.setFillColor(sf::Color(30, 30, 30));
     obs4.setOutlineThickness(2.f);
     obs4.setOutlineColor(sf::Color::Black);
-
     hard.obstacles.push_back(obs4);
+
     availableMaps.push_back(hard);
 }
 
@@ -158,7 +163,7 @@ void Game::initGameplayHUD() {
         btn.costText.setFillColor(sf::Color::Yellow);
         btn.costText.setPosition({ btn.rect.getPosition().x + 220.f, btn.rect.getPosition().y + 10.f });
 
-        shopButtons.push_back(btn);
+        shopButtons.push_back(std::move(btn));
     }
 
     ghostTower.setSize({ 40.f, 40.f });
@@ -166,19 +171,20 @@ void Game::initGameplayHUD() {
     ghostTower.setFillColor(sf::Color(255, 255, 255, 128));
 }
 
+
 void Game::changeState(GameState newState) {
     currentState = newState;
     menuManager.clearButtons();
 
     sf::VideoMode desktopMode = sf::VideoMode::getDesktopMode();
-    float centerX = desktopMode.size.x / 2.0f - 125.f;
+    float centerX = desktopMode.size.x / 2.0f - 175.f; // Adjust based on button width
 
     if (currentState == GameState::MAIN_MENU) {
         menuManager.addButton("Graj", { centerX, 360.f }, [this]() { changeState(GameState::MAP_SELECTION); });
         menuManager.addButton("Wyjscie", { centerX, 460.f }, [this]() { window.close(); });
     }
     else if (currentState == GameState::MAP_SELECTION) {
-        // Generujemy 3 przyciski dla ka¿dej z dostêpnych map
+        // Generujemy 3 przyciski dla ka dej z dost pnych map
         menuManager.addButton(availableMaps[0].name, { centerX, 300.f }, [this]() { startGame(0); });
         menuManager.addButton(availableMaps[1].name, { centerX, 400.f }, [this]() { startGame(1); });
         menuManager.addButton(availableMaps[2].name, { centerX, 500.f }, [this]() { startGame(2); });
@@ -189,6 +195,7 @@ void Game::changeState(GameState newState) {
     }
 }
 
+
 void Game::startGame(int mapIndex) {
     currentMapIndex = mapIndex;
     auto& map = availableMaps[currentMapIndex];
@@ -196,16 +203,15 @@ void Game::startGame(int mapIndex) {
     playerStats.baseHealth = playerStats.maxBaseHealth;
     playerStats.gold = 500;
     playerStats.score = 0;
-
     isPlacingTower = false;
     hasWon = false;
+
     activeTowers.clear();
     activeProjectiles.clear();
-
     waveManager.reset();
     waveManager.setMapData(map.path, map.totalWaves, map.difficulty);
 
-    // Rysowanie nowej œcie¿ki
+    // Rysowanie nowej  cie ki
     pathLines.clear();
     for (const auto& point : map.path) {
         pathLines.append(sf::Vertex(point, map.pathColor));
@@ -214,6 +220,7 @@ void Game::startGame(int mapIndex) {
     changeState(GameState::GAMEPLAY);
     waveManager.loadWaveDataAsync();
 }
+
 
 void Game::run() {
     while (window.isOpen()) {
@@ -238,7 +245,6 @@ void Game::handleEvents() {
                     currentInput += static_cast<char>(unicode); errorText.setString("");
                 }
             }
-
             if (const auto* keyEvent = event->getIf<sf::Event::KeyPressed>()) {
                 if (keyEvent->scancode == sf::Keyboard::Scancode::Enter) {
                     std::regex nickPattern("^[a-zA-Z0-9]{3,12}$");
@@ -262,7 +268,7 @@ void Game::handleEvents() {
                 handleGameplayClicks(mousePos, mouseEvent->button);
             }
         }
-        else { // Mysz dla ca³ego menu / ekranu logowania / game over
+        else { // Mysz dla ca ego menu / ekranu logowania / game over
             if (const auto* mouseEvent = event->getIf<sf::Event::MouseButtonPressed>()) {
                 if (mouseEvent->button == sf::Mouse::Button::Left) {
                     menuManager.handleClick({ static_cast<float>(mouseEvent->position.x), static_cast<float>(mouseEvent->position.y) });
@@ -315,16 +321,16 @@ void Game::handleGameplayClicks(sf::Vector2f mousePos, sf::Mouse::Button button)
 }
 
 bool Game::canPlaceTower(sf::Vector2f pos) {
-    if (pos.x > window.getSize().x - 370.f) return false;
+    if (pos.x > window.getSize().x - 370.f) return false; // Nie na HUD
 
-    // Sprawdzanie odleg³oœci od innych wie¿
+    // Sprawdzanie odleg ci od innych wie 
     for (const auto& tower : activeTowers) {
         sf::Vector2f tPos = tower->getPosition();
         float distSq = (pos.x - tPos.x) * (pos.x - tPos.x) + (pos.y - tPos.y) * (pos.y - tPos.y);
         if (distSq < 45.f * 45.f) return false;
     }
 
-    // Kolizja ze œcie¿k¹
+    // Kolizja ze  cie 
     const auto& path = availableMaps[currentMapIndex].path;
     for (size_t i = 0; i < path.size() - 1; ++i) {
         sf::Vector2f a = path[i], b = path[i + 1], ab = b - a, ap = pos - a;
@@ -337,7 +343,7 @@ bool Game::canPlaceTower(sf::Vector2f pos) {
     }
 
     // POPRAWKA DLA SFML 3: FloatRect wymaga konstruktora FloatRect(Vector2, Vector2) 
-    // oraz u¿ywa findIntersection().has_value() zamiast intersects()
+    // oraz u ywa findIntersection().has_value() zamiast intersects()
     sf::FloatRect towerBounds({ pos.x - 20.f, pos.y - 20.f }, { 40.f, 40.f });
     for (const auto& obs : availableMaps[currentMapIndex].obstacles) {
         if (obs.getGlobalBounds().findIntersection(towerBounds).has_value()) {
@@ -347,6 +353,7 @@ bool Game::canPlaceTower(sf::Vector2f pos) {
 
     return true;
 }
+
 
 void Game::update(float dt) {
     sf::Vector2i mousePosI = sf::Mouse::getPosition(window);
@@ -358,8 +365,7 @@ void Game::update(float dt) {
         inputText.setString(currentInput + "_");
     }
     else if (currentState == GameState::GAMEPLAY) {
-
-        // --- WARUNKI WYGRANEJ I PORA¯KI ---
+        // --- WARUNKI WYGRANEJ I PORA KI ---
         if (playerStats.getHealth() <= 0) {
             hasWon = false;
             changeState(GameState::GAME_OVER);
@@ -367,7 +373,7 @@ void Game::update(float dt) {
         }
         else if (!waveManager.isWaveActive() && waveManager.getEnemies().empty() && waveManager.getCurrentWave() >= availableMaps[currentMapIndex].totalWaves) {
             hasWon = true;
-            // Tutaj w przysz³oœci mo¿na do³o¿yæ premiê za niewydane z³oto / pozosta³e HP
+            // Tutaj w przysz ci mo na do  premi  za niewydane z oto / pozosta e HP
             playerStats.addReward(playerStats.getGold());
             playerStats.addReward(playerStats.getHealth() * 10);
             changeState(GameState::GAME_OVER);
@@ -388,6 +394,7 @@ void Game::update(float dt) {
 
                 for (auto& enemy : waveManager.getEnemies()) {
                     if (enemy->isDead()) continue;
+
                     sf::Vector2f ePos = enemy->getPosition();
                     sf::Vector2f pPos = proj->getPosition();
                     float distSq = (ePos.x - pPos.x) * (ePos.x - pPos.x) + (ePos.y - pPos.y) * (ePos.y - pPos.y);
@@ -437,16 +444,18 @@ void Game::update(float dt) {
     }
 }
 
+
 void Game::drawGameplayHUD() {
     window.draw(hudSidebar);
 
-    // ZMIANA: Wyœwietlamy max. iloœæ fal na ekranie
+    // ZMIANA: Wy wietlamy max. ilo  fal na ekranie
     statsText.setString(std::format("Dowodca: {}\nZloto: {} G\nBaza: {} / {}\nFala: {} / {}",
         playerStats.nickname, playerStats.getGold(), playerStats.getHealth(), playerStats.maxBaseHealth,
         waveManager.getCurrentWave(), availableMaps[currentMapIndex].totalWaves));
     window.draw(statsText);
 
     window.draw(shopTitleText);
+
     for (const auto& btn : shopButtons) {
         window.draw(btn.rect);
         window.draw(btn.text);
@@ -477,7 +486,6 @@ void Game::render() {
     }
     else if (currentState == GameState::MAP_SELECTION) {
         window.draw(backgroundSprite);
-
         sf::Text titleText(font);
         titleText.setString("WYBIERZ MAPE DO OBRONY");
         titleText.setCharacterSize(60);
@@ -497,7 +505,6 @@ void Game::render() {
         endText.setFillColor(hasWon ? sf::Color::Green : sf::Color::Red);
         endText.setOutlineThickness(4.f);
         endText.setOutlineColor(sf::Color::Black);
-
         sf::FloatRect bounds = endText.getLocalBounds();
         // POPRAWKA DLA SFML 3
         endText.setOrigin({ bounds.position.x + bounds.size.x / 2.0f, bounds.position.y + bounds.size.y / 2.0f });
@@ -515,15 +522,15 @@ void Game::render() {
         window.draw(scoreText);
     }
     else if (currentState == GameState::GAMEPLAY) {
-        // T³o mapy zale¿ne od poziomu
+        // T o mapy zale ne od poziomu
         window.clear(availableMaps[currentMapIndex].bgColor);
 
-        // Rysowanie przeszkód
+        // Rysowanie przeszk d
         for (const auto& obs : availableMaps[currentMapIndex].obstacles) {
             window.draw(obs);
         }
 
-        // Œcie¿ka
+        //  cie ka
         window.draw(pathLines);
 
         waveManager.drawEnemies(window);
@@ -531,10 +538,10 @@ void Game::render() {
         for (const auto& proj : activeProjectiles) proj->draw(window);
 
         if (isPlacingTower) window.draw(ghostTower);
+
         drawGameplayHUD();
     }
 
     if (currentState != GameState::GAMEPLAY) menuManager.draw(window);
-
     window.display();
 }

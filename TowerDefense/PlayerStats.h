@@ -2,7 +2,7 @@
 #include <string>
 
 // Klasa zgodna z Twoim diagramem UML z pliku PDF.
-// Bêdzie przechowywaæ dane gracza pomiêdzy ró¿nymi stanami gry.
+// B dzie przechowywa  dane gracza pomi dzy r nymi stanami gry.
 class PlayerStats {
 public:
     std::string nickname = "";
@@ -11,7 +11,7 @@ public:
     int baseHealth = 100;
     int maxBaseHealth = 100;
 
-    // Te metody zaimplementujemy w pe³ni póŸniej, gdy zajmiemy siê mechanik¹
+    // Te metody zaimplementujemy w pe ni p niej, gdy zajmiemy si  mechanik 
     void addReward(int points) { score += points; }
     bool spendGold(int amount) {
         if (gold >= amount) {
