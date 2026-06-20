@@ -6,6 +6,8 @@
 #include <vector>
 #include <memory>
 #include <SFML/Graphics.hpp>
+#include <optional>
+#include <string>
 
 class Tower : public GameObject {
 protected:
@@ -22,13 +24,24 @@ protected:
     ProjectileEffect projEffect; // Efekt pocisku wystrzeliwanego przez tê wie¿ê
     DamageType projDamageType;   // Typ obra¿eñ broni (B³yskawica, Magia, itp)
 
+    // Fallback shape, u¿ywany gdy nie ma tekstury
     sf::RectangleShape shape;
+
+    // Zastêpujemy bool hasTexture; i sf::Sprite sprite; nowoczesnym std::optional
+    std::optional<sf::Sprite> sprite;
+
     sf::CircleShape rangeIndicator;
+
+    bool isHovered = false; // NOWE: Flaga najechania myszka
 
     Enemy* findTarget(const std::vector<std::unique_ptr<Enemy>>& enemies);
 
 public:
-    Tower(sf::Vector2f startPos, float tRange, float tCooldown, int tDamage, int tCost, sf::Color color, float pSpeed, float pSplash, sf::Color pColor, ProjectileEffect pEff = ProjectileEffect::NONE, DamageType dType = DamageType::NORMAL);
+    Tower(sf::Vector2f startPos, float tRange, float tCooldown, int tDamage, int tCost,
+        sf::Color color, float pSpeed, float pSplash, sf::Color pColor,
+        ProjectileEffect pEff, DamageType dType, const std::string& texturePath);
+
+    void setHovered(bool hovered) { isHovered = hovered; }
     virtual ~Tower() = default;
 
     void update(float dt) override;
@@ -38,7 +51,7 @@ public:
     void resetBonusRange() { bonusRange = 0.f; }
     void addBonusRange(float amount) { bonusRange += amount; }
 
-    // G³ówna zaktualizowana logika aktualizacji wie¿y - Wirtualna, bo specyficzne wie¿e mog¹ dzia³aæ inaczej
+    // G³ówna zaktualizowana logika aktualizacji wie¿y
     virtual void updateTower(float dt, const std::vector<std::unique_ptr<Enemy>>& enemies, std::vector<std::unique_ptr<Projectile>>& projectiles, PlayerStats& playerStats, const std::vector<std::unique_ptr<Tower>>& activeTowers);
 
     int getCost() const { return cost; }
@@ -81,7 +94,7 @@ public:
     void updateTower(float dt, const std::vector<std::unique_ptr<Enemy>>& enemies, std::vector<std::unique_ptr<Projectile>>& projectiles, PlayerStats& playerStats, const std::vector<std::unique_ptr<Tower>>& activeTowers) override;
 };
 
-// Piorun razi kilku przeciwników na raz (U¿ywa <ranges> do sortowania celów)
+// Piorun razi kilku przeciwników na raz
 class LightningTower : public Tower {
 public:
     LightningTower(sf::Vector2f startPos);

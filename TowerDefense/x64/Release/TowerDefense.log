@@ -1,0 +1,29 @@
+﻿  Game.cpp
+D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(724,89): warning C4244: "argument": konwersja z "T" do "T", możliwa utrata danych
+D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(724,89): warning C4244:         with
+D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(724,89): warning C4244:         [
+D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(724,89): warning C4244:             T=unsigned int
+D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(724,89): warning C4244:         ]
+D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(724,89): warning C4244:         and
+D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(724,89): warning C4244:         [
+D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(724,89): warning C4244:             T=float
+D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(724,89): warning C4244:         ]
+D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(724,69): warning C4244: "argument": konwersja z "T" do "T", możliwa utrata danych
+D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(724,69): warning C4244:         with
+D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(724,69): warning C4244:         [
+D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(724,69): warning C4244:             T=unsigned int
+D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(724,69): warning C4244:         ]
+D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(724,69): warning C4244:         and
+D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(724,69): warning C4244:         [
+D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(724,69): warning C4244:             T=float
+D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(724,69): warning C4244:         ]
+  MenuMenager.cpp
+  Tower.cpp
+  WaveManager.cpp
+  main.cpp
+  Trwa generowanie kodu
+  8 of 4638 functions ( 0.2%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    31 functions had inline decision re-evaluated but remain unchanged
+  Zakończono generowanie kodu
+  TowerDefense.vcxproj -> D:\PROJEKT PK4\source\repos\TowerDefense\x64\Release\TowerDefense.exe

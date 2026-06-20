@@ -16,7 +16,11 @@ enum class GameState {
     LOGIN,
     MAIN_MENU,
     MAP_SELECTION,
+    SCOREBOARD,
+    OPTIONS,
+    SETTINGS,
     GAMEPLAY,
+    PAUSE, // <-- DODANO STAN PAUZY
     GAME_OVER
 };
 
@@ -97,4 +101,10 @@ private:
 
     std::vector<std::unique_ptr<Tower>> activeTowers;
     std::vector<std::unique_ptr<Projectile>> activeProjectiles;
+
+    std::vector<ScoreEntry> topScores; // BUFOR NA NAJLEPSZE WYNIKI
+
+    // Zmienne do autostartu fali
+    float autoWaveTimer = 0.f;
+    float autoWaveDelay = 5.f; // 5 sekund miedzy falami
 };
