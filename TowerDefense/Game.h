@@ -19,8 +19,9 @@ enum class GameState {
     SCOREBOARD,
     OPTIONS,
     SETTINGS,
+    TUTORIAL, // <-- DODANO STAN TUTORIALA
     GAMEPLAY,
-    PAUSE, // <-- DODANO STAN PAUZY
+    PAUSE,
     GAME_OVER
 };
 
@@ -33,9 +34,12 @@ struct LevelMap {
     sf::Color bgColor;
     sf::Color pathColor;
 
-    // NOWE: Wizualizacja grubej œcie¿ki
+    // NOWE: Wizualizacja grubej œcie¿ki (Przywrócone)
     std::vector<sf::RectangleShape> pathShapes;
     std::vector<sf::CircleShape> pathJoints;
+
+    // NOWE: Kszta³t t³a, aby móc nak³adaæ na niego powtarzaln¹ teksturê kafelkowan¹
+    sf::RectangleShape bgShape;
 };
 
 struct ShopButton {
@@ -106,9 +110,12 @@ private:
     std::vector<std::unique_ptr<Tower>> activeTowers;
     std::vector<std::unique_ptr<Projectile>> activeProjectiles;
 
-    std::vector<ScoreEntry> topScores; // BUFOR NA NAJLEPSZE WYNIKI
+    std::vector<ScoreEntry> topScores;
 
     // Zmienne do autostartu fali
     float autoWaveTimer = 0.f;
-    float autoWaveDelay = 5.f; // 5 sekund miedzy falami
+    float autoWaveDelay = 5.f;
+
+    // Strona tutoriala
+    int tutorialPage = 0;
 };

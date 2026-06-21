@@ -1,6 +1,12 @@
 #include "Game.h"
 #include <regex>
 #include <cmath>
+#include "TextureManager.h"
+
+// Anonimowa przestrzeÒ nazw dla zmiennych globalnych tego pliku (strona tutoriala)
+namespace {
+    int tutorialPage = 0;
+}
 
 Game::Game()
     : currentState(GameState::LOGIN), menuManager(font), backgroundSprite(backgroundTexture),
@@ -9,6 +15,9 @@ Game::Game()
 {
     sf::VideoMode desktopMode = sf::VideoMode::getDesktopMode();
     window.create(desktopMode, "Tower Defense", sf::State::Fullscreen);
+
+    // SFML 3: Wymuszamy logiczny widok gry (KamerÍ) 1920x1080 niezaleønie od wymiarÛw fizycznych okna
+    window.setView(sf::View(sf::Vector2f(1920.f / 2.f, 1080.f / 2.f), sf::Vector2f(1920.f, 1080.f)));
 
     if (!backgroundTexture.loadFromFile("bgBlue.jpg")) {
         std::cerr << "Blad wczytywania tekstury bgBlue.jpg!" << std::endl;
@@ -19,6 +28,7 @@ Game::Game()
     }
 
     initMaps();
+    pathLines.setPrimitiveType(sf::PrimitiveType::LineStrip);
 
     tytul.setString("TOWER DEFENSE");
     tytul.setCharacterSize(90);
@@ -45,107 +55,205 @@ Game::Game()
 }
 
 void Game::initMaps() {
-    availableMaps.clear(); // Zabezpieczenie przed wielokrotnym wczytaniem
+    availableMaps.clear();
 
-    // Funkcja pomocnicza budujπca grubπ úcieøkÍ z okrπg≥ymi ≥πczeniami na zakrÍtach
-    auto buildThickPath = [](LevelMap& map) {
-        float pathThickness = 80.f; // Grubosc sciezki (jak na obrazkach referencyjnych)
+    // --- FUNKCJE POMOCNICZE DO KAFELKOWANIA TEKSTUR ---
+
+    // Konfiguracja t≥a z obs≥ugπ kafelkowania
+    auto setupBackground = [](LevelMap& map, const std::string& texName = "") {
+        map.bgShape.setSize(sf::Vector2f(1920.f, 1080.f));
+        if (!texName.empty()) {
+            sf::Texture& tex = TextureManager::getInstance().get(texName);
+            tex.setRepeated(true);
+            map.bgShape.setTexture(&tex);
+            map.bgShape.setTextureRect(sf::IntRect(sf::Vector2i(0, 0), sf::Vector2i(1920, 1080)));
+            map.bgShape.setFillColor(sf::Color::White); // Biel odzyskuje oryginalne kolory tekstury
+        }
+        else {
+            map.bgShape.setFillColor(map.bgColor);
+        }
+        };
+
+    // Konfiguracja tekstury na przeszkodÍ
+    auto setupObstacle = [](sf::RectangleShape& obs, const std::string& texName = "") {
+        if (!texName.empty()) {
+            sf::Texture& tex = TextureManager::getInstance().get(texName);
+            tex.setRepeated(true);
+            obs.setTexture(&tex);
+            obs.setTextureRect(sf::IntRect(sf::Vector2i(0, 0), sf::Vector2i(static_cast<int>(obs.getSize().x), static_cast<int>(obs.getSize().y))));
+            obs.setFillColor(sf::Color::White);
+        }
+        };
+
+    // Funkcja budujπca grubπ úcieøkÍ z okrπg≥ymi ≥πczeniami i moøliwoúciπ otexturowania
+    auto buildThickPath = [](LevelMap& map, const std::string& texName = "") {
+        float pathThickness = 80.f; // Grubosc sciezki
+        sf::Texture* tex = nullptr;
+
+        if (!texName.empty()) {
+            tex = &TextureManager::getInstance().get(texName);
+            tex->setRepeated(true);
+        }
+
         for (size_t i = 0; i < map.path.size() - 1; ++i) {
             sf::Vector2f p1 = map.path[i];
             sf::Vector2f p2 = map.path[i + 1];
             sf::Vector2f diff = p2 - p1;
             float length = std::sqrt(diff.x * diff.x + diff.y * diff.y);
 
-            // Poprawka dla SFML 3: Bezpoúrednie pobranie radianÛw z atan2
             float angleRads = std::atan2(diff.y, diff.x);
 
-            sf::RectangleShape segment({ length, pathThickness });
-            segment.setOrigin({ 0.f, pathThickness / 2.0f });
+            sf::RectangleShape segment(sf::Vector2f(length, pathThickness));
+            segment.setOrigin(sf::Vector2f(0.f, pathThickness / 2.0f));
             segment.setPosition(p1);
-            // Poprawka dla SFML 3: Uøycie sf::radians zamiast rzutowania float do setRotation
             segment.setRotation(sf::radians(angleRads));
-            segment.setFillColor(map.pathColor);
+
+            if (tex) {
+                segment.setTexture(tex);
+                segment.setTextureRect(sf::IntRect(sf::Vector2i(0, 0), sf::Vector2i(static_cast<int>(length), static_cast<int>(pathThickness))));
+                segment.setFillColor(sf::Color::White);
+            }
+            else {
+                segment.setFillColor(map.pathColor);
+            }
             map.pathShapes.push_back(segment);
 
-            // Okrπg≥e z≥πcze (wyg≥adza luki miÍdzy prostokπtami na zakrÍtach)
+            // Okrπg≥e z≥πcze
             sf::CircleShape joint(pathThickness / 2.0f);
-            joint.setOrigin({ pathThickness / 2.0f, pathThickness / 2.0f });
+            joint.setOrigin(sf::Vector2f(pathThickness / 2.0f, pathThickness / 2.0f));
             joint.setPosition(p1);
-            joint.setFillColor(map.pathColor);
+            if (tex) {
+                joint.setTexture(tex);
+                joint.setTextureRect(sf::IntRect(sf::Vector2i(0, 0), sf::Vector2i(static_cast<int>(pathThickness), static_cast<int>(pathThickness))));
+                joint.setFillColor(sf::Color::White);
+            }
+            else {
+                joint.setFillColor(map.pathColor);
+            }
             map.pathJoints.push_back(joint);
         }
         // ZamkniÍcie ostatniego punktu okrÍgiem
         if (!map.path.empty()) {
             sf::CircleShape joint(pathThickness / 2.0f);
-            joint.setOrigin({ pathThickness / 2.0f, pathThickness / 2.0f });
+            joint.setOrigin(sf::Vector2f(pathThickness / 2.0f, pathThickness / 2.0f));
             joint.setPosition(map.path.back());
-            joint.setFillColor(map.pathColor);
+            if (tex) {
+                joint.setTexture(tex);
+                joint.setTextureRect(sf::IntRect(sf::Vector2i(0, 0), sf::Vector2i(static_cast<int>(pathThickness), static_cast<int>(pathThickness))));
+                joint.setFillColor(sf::Color::White);
+            }
+            else {
+                joint.setFillColor(map.pathColor);
+            }
             map.pathJoints.push_back(joint);
         }
         };
 
-    // MAPA £ATWA - Trawiasta z brπzowπ, polnπ úcieøkπ (styl z pierwszego zdjÍcia)
+
+    // ===============================================
+    // MAPA £ATWA
+    // ===============================================
+    // Zmienne do ≥adowania tekstur (Wpisz nazwy plikÛw z folderu projektu, np. "grass.jpg")
+    std::string easyBgTex = "";
+    std::string easyPathTex = "";
+    std::string easyObsTex = "";
+
     LevelMap easy;
     easy.name = "Latwa (10 fal) [+0.0x pkt]";
     easy.path = { {-50.f, 200.f}, {300.f, 200.f}, {300.f, 600.f}, {800.f, 600.f}, {800.f, 300.f}, {1600.f, 300.f} };
     easy.totalWaves = 10;
     easy.difficulty = 0;
-    easy.bgColor = sf::Color(83, 148, 48); // Zielona trawa
-    easy.pathColor = sf::Color(168, 122, 81); // Brπzowa ziemia
+    easy.bgColor = sf::Color(34, 139, 34);
+    easy.pathColor = sf::Color(168, 122, 81);
 
-    sf::RectangleShape obs1({ 120.f, 90.f });
-    obs1.setPosition({ 450.f, 350.f });
-    obs1.setFillColor(sf::Color(100, 100, 100)); // Ska≥a
-    obs1.setOutlineThickness(3.f);
-    obs1.setOutlineColor(sf::Color(60, 60, 60));
+    setupBackground(easy, easyBgTex);
+
+    sf::RectangleShape obs1(sf::Vector2f(200.f, 200.f));
+    obs1.setPosition({ 400.f, 300.f });
+    obs1.setFillColor(sf::Color(105, 105, 105));
+    obs1.setOutlineThickness(2.f);
+    obs1.setOutlineColor(sf::Color::Black);
+
+    setupObstacle(obs1, easyObsTex);
     easy.obstacles.push_back(obs1);
 
-    buildThickPath(easy);
+    buildThickPath(easy, easyPathTex);
     availableMaps.push_back(easy);
 
-    // MAPA åREDNIA - Jasna trawa z brukowanπ, szarπ úcieøkπ (styl z drugiego zdjÍcia)
+    // ===============================================
+    // MAPA åREDNIA
+    // ===============================================
+    // Zmienne do ≥adowania tekstur (Wpisz nazwy plikÛw z folderu projektu, np. "sand.jpg")
+    std::string mediumBgTex = "";
+    std::string mediumPathTex = "";
+    std::string mediumObsTex = "";
+
     LevelMap medium;
     medium.name = "Srednia (15 fal) [+0.5x pkt]";
     medium.path = { {-50.f, 500.f}, {200.f, 500.f}, {200.f, 100.f}, {700.f, 100.f}, {700.f, 700.f}, {1200.f, 700.f}, {1200.f, 400.f}, {1600.f, 400.f} };
     medium.totalWaves = 15;
     medium.difficulty = 1;
-    medium.bgColor = sf::Color(73, 186, 17); // Jaskrawa trawa
-    medium.pathColor = sf::Color(138, 142, 145); // Szary bruk
+    medium.bgColor = sf::Color(139, 115, 85);
+    medium.pathColor = sf::Color(138, 142, 145);
 
-    sf::RectangleShape obs2({ 200.f, 100.f });
-    obs2.setPosition({ 350.f, 250.f });
+    setupBackground(medium, mediumBgTex);
+
+    sf::RectangleShape obs2(sf::Vector2f(400.f, 150.f));
+    obs2.setPosition({ 250.f, 300.f });
     obs2.setFillColor(sf::Color(80, 80, 80));
-    obs2.setOutlineThickness(3.f);
-    obs2.setOutlineColor(sf::Color(50, 50, 50));
-    medium.obstacles.push_back(obs2);
+    obs2.setOutlineThickness(2.f);
+    obs2.setOutlineColor(sf::Color::Black);
+    setupObstacle(obs2, mediumObsTex);
 
-    buildThickPath(medium);
+    sf::RectangleShape obs3(sf::Vector2f(200.f, 300.f));
+    obs3.setPosition({ 800.f, 200.f });
+    obs3.setFillColor(sf::Color(80, 80, 80));
+    obs3.setOutlineThickness(2.f);
+    obs3.setOutlineColor(sf::Color::Black);
+    setupObstacle(obs3, mediumObsTex);
+
+    medium.obstacles.push_back(obs2);
+    medium.obstacles.push_back(obs3);
+
+    buildThickPath(medium, mediumPathTex);
     availableMaps.push_back(medium);
 
-    // MAPA TRUDNA - Mroczna, wulkaniczna kraina
+    // ===============================================
+    // MAPA TRUDNA
+    // ===============================================
+    // Zmienne do ≥adowania tekstur (Wpisz nazwy plikÛw z folderu projektu, np. "lava_bg.jpg")
+    std::string hardBgTex = "";
+    std::string hardPathTex = "";
+    std::string hardObsTex = "";
+
     LevelMap hard;
     hard.name = "Trudna (20 fal) [+1.0x pkt]";
     hard.path = { {800.f, -50.f}, {800.f, 300.f}, {200.f, 300.f}, {200.f, 800.f}, {1300.f, 800.f}, {1300.f, 150.f}, {1600.f, 150.f} };
     hard.totalWaves = 20;
     hard.difficulty = 2;
-    hard.bgColor = sf::Color(40, 30, 30); // Mroczna ziemia
-    hard.pathColor = sf::Color(180, 50, 20); // åcieøka z lawy
+    hard.bgColor = sf::Color(60, 60, 60);
+    hard.pathColor = sf::Color(180, 50, 20);
 
-    sf::RectangleShape obs4({ 300.f, 200.f });
-    obs4.setPosition({ 400.f, 450.f });
-    obs4.setFillColor(sf::Color(20, 20, 20)); // ZwÍglona ska≥a
-    obs4.setOutlineThickness(3.f);
-    obs4.setOutlineColor(sf::Color(0, 0, 0));
+    setupBackground(hard, hardBgTex);
+
+    sf::RectangleShape obs4(sf::Vector2f(600.f, 400.f));
+    obs4.setPosition({ 350.f, 350.f });
+    obs4.setFillColor(sf::Color(30, 30, 30));
+    obs4.setOutlineThickness(2.f);
+    obs4.setOutlineColor(sf::Color::Black);
+    setupObstacle(obs4, hardObsTex);
     hard.obstacles.push_back(obs4);
 
-    buildThickPath(hard);
+    buildThickPath(hard, hardPathTex);
     availableMaps.push_back(hard);
 }
 
 void Game::initGameplayHUD() {
     shopButtons.clear();
-    float windowWidth = static_cast<float>(window.getSize().x);
-    float windowHeight = static_cast<float>(window.getSize().y);
+
+    // Sztywno ustalamy ROZDZIELCZOå∆ LOGICZN•, bez pytania okna o jego fizyczny wymiar
+    float windowWidth = 1920.f;
+    float windowHeight = 1080.f;
     float sidebarWidth = 350.f;
 
     hudSidebar.setSize({ sidebarWidth, windowHeight });
@@ -192,7 +300,7 @@ void Game::initGameplayHUD() {
         shopButtons.push_back(std::move(btn));
     }
 
-    // ZWI KSZONO ROZMIAR "DUCHA" WIEØY Z 40x40 NA 100x100
+    // PowiÍkszony duch wieøy dopasowany do wizualnego rozmiaru wieø (100x100)
     ghostTower.setSize({ 50.f, 70.f });
     ghostTower.setOrigin({ 20.f, 20.f });
     ghostTower.setFillColor(sf::Color(255, 255, 255, 128));
@@ -201,28 +309,27 @@ void Game::initGameplayHUD() {
 
 void Game::changeState(GameState newState) {
     // --- INTELIGENTNY SYSTEM POWROTU ---
-    // Zmienna statyczna przechowujπca ostatni "g≥Ûwny" ekran przed wejúciem w podmenu
     static GameState savedReturnState = GameState::MAIN_MENU;
 
-    // Jeúli obecnie jesteúmy w G≥Ûwnym Menu lub Pauzie, zapisujemy to jako punkt powrotu
     if (currentState == GameState::MAIN_MENU || currentState == GameState::PAUSE) {
         savedReturnState = currentState;
     }
 
-    // Kopiujemy go lokalnie by bezpiecznie przekazaÊ do lambd (przyciskÛw)
     GameState targetReturn = savedReturnState;
 
     currentState = newState;
     menuManager.clearButtons();
 
-    float centerX = window.getSize().x / 2.0f;
+    // CENTROWANIE OPARTE NA STA£EJ ROZDZIELCZOåCI LOGICZNEJ
+    float centerX = 1920.f / 2.0f;
 
     if (currentState == GameState::MAIN_MENU) {
         menuManager.addButton("Graj", { centerX, 250.f }, [this]() { changeState(GameState::MAP_SELECTION); });
         menuManager.addButton("Tablica Wynikow", { centerX, 350.f }, [this]() { changeState(GameState::SCOREBOARD); });
         menuManager.addButton("Modyfikatory", { centerX, 450.f }, [this]() { changeState(GameState::OPTIONS); });
         menuManager.addButton("Ustawienia ", { centerX, 550.f }, [this]() { changeState(GameState::SETTINGS); });
-        menuManager.addButton("Wyjscie", { centerX, 650.f }, [this]() { window.close(); });
+        menuManager.addButton("Tutorial", { centerX, 650.f }, [this]() { changeState(GameState::TUTORIAL); });
+        menuManager.addButton("Wyjscie", { centerX, 750.f }, [this]() { window.close(); });
     }
     else if (currentState == GameState::MAP_SELECTION) {
         menuManager.addButton(availableMaps[0].name, { centerX, 300.f }, [this]() { startGame(0); });
@@ -232,7 +339,6 @@ void Game::changeState(GameState newState) {
     }
     else if (currentState == GameState::SCOREBOARD) {
         topScores = PlayerStats::loadLeaderboard();
-        // ZMIANA: PowrÛt kieruje do zapisanego targetReturn
         menuManager.addButton("Powrot", { centerX, 750.f }, [this, targetReturn]() { changeState(targetReturn); });
     }
     else if (currentState == GameState::OPTIONS) {
@@ -250,27 +356,37 @@ void Game::changeState(GameState newState) {
             playerStats.autoWaveStart = !playerStats.autoWaveStart;
             changeState(GameState::OPTIONS);
             });
-        // ZMIANA: PowrÛt kieruje do zapisanego targetReturn
         menuManager.addButton("Powrot", { centerX, 650.f }, [this, targetReturn]() { changeState(targetReturn); });
     }
     else if (currentState == GameState::SETTINGS) {
         menuManager.addButton("1280x720 (Okno)", { centerX, 300.f }, [this]() {
             window.create(sf::VideoMode({ 1280, 720 }), "Tower Defense", sf::Style::Close);
-            initGameplayHUD();
+            window.setView(sf::View(sf::Vector2f(1920.f / 2.f, 1080.f / 2.f), sf::Vector2f(1920.f, 1080.f)));
             changeState(GameState::SETTINGS);
             });
         menuManager.addButton("1920x1080 (Okno)", { centerX, 400.f }, [this]() {
             window.create(sf::VideoMode({ 1920, 1080 }), "Tower Defense", sf::Style::Close);
-            initGameplayHUD();
+            window.setView(sf::View(sf::Vector2f(1920.f / 2.f, 1080.f / 2.f), sf::Vector2f(1920.f, 1080.f)));
             changeState(GameState::SETTINGS);
             });
         menuManager.addButton("Pelny Ekran", { centerX, 500.f }, [this]() {
             window.create(sf::VideoMode::getDesktopMode(), "Tower Defense", sf::State::Fullscreen);
-            initGameplayHUD();
+            window.setView(sf::View(sf::Vector2f(1920.f / 2.f, 1080.f / 2.f), sf::Vector2f(1920.f, 1080.f)));
             changeState(GameState::SETTINGS);
             });
-        // ZMIANA: PowrÛt kieruje do zapisanego targetReturn
         menuManager.addButton("Powrot", { centerX, 700.f }, [this, targetReturn]() { changeState(targetReturn); });
+    }
+    else if (currentState == GameState::TUTORIAL) {
+        // Szerzej rozstawione przyciski nawigacyjne
+        menuManager.addButton("Poprzednia", { centerX - 450.f, 950.f }, [this]() {
+            tutorialPage = 0; changeState(GameState::TUTORIAL);
+            });
+        menuManager.addButton("Powrot", { centerX, 950.f }, [this, targetReturn]() {
+            changeState(targetReturn);
+            });
+        menuManager.addButton("Nastepna", { centerX + 450.f, 950.f }, [this]() {
+            tutorialPage = 1; changeState(GameState::TUTORIAL);
+            });
     }
     else if (currentState == GameState::PAUSE) {
         menuManager.addButton("Wznow", { centerX, 250.f }, [this]() { changeState(GameState::GAMEPLAY); });
@@ -294,13 +410,11 @@ void Game::startGame(int mapIndex) {
     currentMapIndex = mapIndex;
     auto& map = availableMaps[currentMapIndex];
 
-    // DODANIE MNOØNIKA TRUDNOåCI: £atwa +0.0x, årednia +0.5x, Trudna +1.0x
     playerStats.mapDifficultyMultiplier = map.difficulty * 0.5f;
     playerStats.baseHealth = playerStats.modifierFragileBase ? 50 : playerStats.maxBaseHealth;
     playerStats.gold = playerStats.modifierLessGold ? 500 : 1000;
     playerStats.score = 0;
 
-    // Obliczamy ostateczny mnoznik po wszystkich bonusach
     playerStats.recalculateMultiplier();
 
     isPlacingTower = false;
@@ -311,6 +425,11 @@ void Game::startGame(int mapIndex) {
     waveManager.reset();
     waveManager.setMapData(map.path, map.totalWaves, map.difficulty);
     autoWaveTimer = autoWaveDelay;
+
+    pathLines.clear();
+    for (const auto& point : map.path) {
+        pathLines.append(sf::Vertex(point, map.pathColor));
+    }
 
     changeState(GameState::GAMEPLAY);
     waveManager.loadWaveDataAsync();
@@ -355,31 +474,33 @@ void Game::handleEvents() {
                 if (keyEvent->scancode == sf::Keyboard::Scancode::Space) waveManager.startNextWave();
                 if (keyEvent->scancode == sf::Keyboard::Scancode::Escape) {
                     if (isPlacingTower) isPlacingTower = false;
-                    else changeState(GameState::PAUSE); // Prze≥πcz na PAUZ  zamiast na MENU
+                    else changeState(GameState::PAUSE);
                 }
             }
             if (const auto* mouseEvent = event->getIf<sf::Event::MouseButtonPressed>()) {
-                sf::Vector2f mousePos(static_cast<float>(mouseEvent->position.x), static_cast<float>(mouseEvent->position.y));
+                // TRANSLACJA MYSZKI - T≥umaczy fizyczne klikniÍcia w oknie na naszπ wirtualnπ mapÍ 1920x1080
+                sf::Vector2f mousePos = window.mapPixelToCoords(mouseEvent->position);
                 handleGameplayClicks(mousePos, mouseEvent->button);
             }
         }
         else if (currentState == GameState::PAUSE) {
             if (const auto* keyEvent = event->getIf<sf::Event::KeyPressed>()) {
-                // Szybki powrÛt rÛwnieø za pomocπ klawisza ESC
                 if (keyEvent->scancode == sf::Keyboard::Scancode::Escape) {
                     changeState(GameState::GAMEPLAY);
                 }
             }
             if (const auto* mouseEvent = event->getIf<sf::Event::MouseButtonPressed>()) {
                 if (mouseEvent->button == sf::Mouse::Button::Left) {
-                    menuManager.handleClick({ static_cast<float>(mouseEvent->position.x), static_cast<float>(mouseEvent->position.y) });
+                    sf::Vector2f mousePos = window.mapPixelToCoords(mouseEvent->position);
+                    menuManager.handleClick(mousePos);
                 }
             }
         }
         else {
             if (const auto* mouseEvent = event->getIf<sf::Event::MouseButtonPressed>()) {
                 if (mouseEvent->button == sf::Mouse::Button::Left) {
-                    menuManager.handleClick({ static_cast<float>(mouseEvent->position.x), static_cast<float>(mouseEvent->position.y) });
+                    sf::Vector2f mousePos = window.mapPixelToCoords(mouseEvent->position);
+                    menuManager.handleClick(mousePos);
                 }
             }
         }
@@ -387,7 +508,29 @@ void Game::handleEvents() {
 }
 
 void Game::handleGameplayClicks(sf::Vector2f mousePos, sf::Mouse::Button button) {
-    if (button == sf::Mouse::Button::Right) { isPlacingTower = false; return; }
+    if (button == sf::Mouse::Button::Right) {
+        isPlacingTower = false;
+
+        // --- LOGIKA SPRZEDAØY WIEØY (PPM) ---
+        int currentWv = waveManager.getCurrentWave();
+        int totalWvs = availableMaps[currentMapIndex].totalWaves;
+
+        // Zablokuj moøliwoúÊ sprzedaøy wieøy na 5 rund przed koÒcem gry
+        if (currentWv <= totalWvs - 5) {
+            for (auto it = activeTowers.begin(); it != activeTowers.end(); ++it) {
+                sf::Vector2f tPos = (*it)->getPosition();
+                float distSq = (mousePos.x - tPos.x) * (mousePos.x - tPos.x) + (mousePos.y - tPos.y) * (mousePos.y - tPos.y);
+
+                // Sprawdzamy czy trafiliúmy myszkπ w hitbox wieøy
+                if (distSq <= 45.f * 45.f) {
+                    playerStats.gold += (*it)->getCost() / 2; // Zwrot po≥owy kosztÛw
+                    activeTowers.erase(it); // UsuniÍcie wieøy
+                    break;
+                }
+            }
+        }
+        return;
+    }
 
     if (button == sf::Mouse::Button::Left) {
         if (hudSidebar.getGlobalBounds().contains(mousePos)) {
@@ -429,7 +572,8 @@ void Game::handleGameplayClicks(sf::Vector2f mousePos, sf::Mouse::Button button)
 }
 
 bool Game::canPlaceTower(sf::Vector2f pos) {
-    if (pos.x > window.getSize().x - 370.f) return false;
+    // Opieramy limit ekranu na sztywnej logice - ekran ZAWSZE ma wymiar wirtualny 1920x1080
+    if (pos.x > 1920.f - 370.f) return false;
 
     for (const auto& tower : activeTowers) {
         sf::Vector2f tPos = tower->getPosition();
@@ -446,12 +590,12 @@ bool Game::canPlaceTower(sf::Vector2f pos) {
         sf::Vector2f closest = a + ab * t;
         float distToPathSq = (pos.x - closest.x) * (pos.x - closest.x) + (pos.y - closest.y) * (pos.y - closest.y);
 
-        // ZMIANA Z 35x35: Kolizja uwzglÍdnia teraz grubszπ úcieøkÍ (40px po≥owa úcieøki + 20px promieÒ wieøy = 60px)
+        // Zmieniony margines dla grubszej úcieøki (40px po≥owa úcieøki + 20px wieøy = 60px)
         if (distToPathSq < 60.f * 60.f) return false;
     }
 
-    // DOSTOSOWANO KOLIZJ  DO POWI KSZONEGO ROZMIARU "DUCHA" (100x100 zamiast 40x40)
-    sf::FloatRect towerBounds({ pos.x - 50.f, pos.y - 50.f }, { 100.f, 100.f });
+    // Dostosowany rozmiar kolizji (100x100)
+    sf::FloatRect towerBounds(sf::Vector2f(pos.x - 50.f, pos.y - 50.f), sf::Vector2f(100.f, 100.f));
     for (const auto& obs : availableMaps[currentMapIndex].obstacles) {
         if (obs.getGlobalBounds().findIntersection(towerBounds).has_value()) {
             return false;
@@ -464,16 +608,15 @@ bool Game::canPlaceTower(sf::Vector2f pos) {
 
 void Game::update(float dt) {
     sf::Vector2i mousePosI = sf::Mouse::getPosition(window);
-    sf::Vector2f mousePos(static_cast<float>(mousePosI.x), static_cast<float>(mousePosI.y));
+    // TRANSLACJA DLA BIEØ•CEGO RUCHU MYSZKI
+    sf::Vector2f mousePos = window.mapPixelToCoords(mousePosI);
 
     menuManager.update(mousePos);
 
-    // Wykrywanie najechania myszkπ na wieøe - dzia≥a w GAMEPLAY oraz na PAUZIE
     if (currentState == GameState::GAMEPLAY || currentState == GameState::PAUSE) {
         for (auto& tower : activeTowers) {
             sf::Vector2f tPos = tower->getPosition();
             float distSq = (mousePos.x - tPos.x) * (mousePos.x - tPos.x) + (mousePos.y - tPos.y) * (mousePos.y - tPos.y);
-            // ZwiÍkszono promieÒ z 20.f do 45.f - lepiej odpowiada wymiarom wizualnym wieøy
             tower->setHovered(distSq <= 45.f * 45.f);
         }
     }
@@ -501,7 +644,6 @@ void Game::update(float dt) {
 
         waveManager.updateEnemies(dt, playerStats);
 
-        // Resetowanie bonusowego zasiÍgu (z radaru) i update
         for (auto& tower : activeTowers) {
             tower->resetBonusRange();
         }
@@ -510,9 +652,8 @@ void Game::update(float dt) {
 
         for (auto& proj : activeProjectiles) {
 
-            // --- NOWA LOGIKA SAMONAPROWADZANIA (DLA MAGA) ---
+            // Logika naprowadzania pocisku dla Maga
             if (Enemy* target = proj->getHomingTarget()) {
-                // Najpierw upewniamy siÍ, czy wskaünik do wroga wciπø jest waøny i wrÛg øyje
                 bool isAlive = false;
                 for (const auto& e : waveManager.getEnemies()) {
                     if (e.get() == target && !e->isDead()) {
@@ -522,10 +663,10 @@ void Game::update(float dt) {
                 }
 
                 if (isAlive) {
-                    proj->setTargetPos(target->getPosition()); // Korygowanie lotu za wrogiem
+                    proj->setTargetPos(target->getPosition());
                 }
                 else {
-                    proj->clearHomingTarget(); // WrÛg zginπ≥ - pocisk leci normalnie na ostatniπ znanπ pozycjÍ
+                    proj->clearHomingTarget();
                 }
             }
 
@@ -615,6 +756,21 @@ void Game::drawGameplayHUD() {
         window.draw(btn.costText);
     }
 
+    // --- INFORMACJA O SPRZEDAØY WIEØ ---
+    sf::Text sellInfo(font);
+    sellInfo.setCharacterSize(22);
+    sellInfo.setPosition(sf::Vector2f(1920.f - 330.f, 850.f));
+
+    if (waveManager.getCurrentWave() <= availableMaps[currentMapIndex].totalWaves - 5) {
+        sellInfo.setString("PPM na wieze:\nSprzedaj (50%)");
+        sellInfo.setFillColor(sf::Color(100, 255, 100)); // Zielonkawy
+    }
+    else {
+        sellInfo.setString("Sprzedaz zablokowana\n(Ostatnie 5 fal!)");
+        sellInfo.setFillColor(sf::Color(255, 100, 100)); // Czerwonawy
+    }
+    window.draw(sellInfo);
+
     if (!waveManager.isWaveActive() && waveManager.getCurrentWave() < availableMaps[currentMapIndex].totalWaves) {
         sf::Text info(font);
 
@@ -628,7 +784,8 @@ void Game::drawGameplayHUD() {
         }
 
         info.setCharacterSize(28);
-        info.setPosition({ window.getSize().x / 2.f - 250.f, 20.f });
+        // årodek w oparciu o 1920
+        info.setPosition({ 1920.f / 2.f - 250.f, 20.f });
         info.setOutlineThickness(2.f);
         info.setOutlineColor(sf::Color::Black);
         window.draw(info);
@@ -638,7 +795,7 @@ void Game::drawGameplayHUD() {
 void Game::render() {
     window.clear(sf::Color(20, 20, 30));
 
-    float centerX = window.getSize().x / 2.0f;
+    float centerX = 1920.f / 2.0f;
 
     if (currentState == GameState::LOGIN) {
         tytul.setPosition({ centerX, 150.f });
@@ -716,6 +873,98 @@ void Game::render() {
         titleText.setPosition({ centerX, 150.f });
         window.draw(titleText);
     }
+    else if (currentState == GameState::TUTORIAL) {
+        window.draw(backgroundSprite);
+
+        // TYTU£ ENCYKLOPEDII
+        sf::Text titleText(font);
+        titleText.setString("LEKSYKON DOWODCY");
+        titleText.setCharacterSize(60);
+        titleText.setFillColor(sf::Color::Yellow);
+        sf::FloatRect bounds = titleText.getLocalBounds();
+        titleText.setOrigin({ bounds.position.x + bounds.size.x / 2.0f, bounds.position.y + bounds.size.y / 2.0f });
+        titleText.setPosition({ centerX, 80.f });
+        window.draw(titleText);
+
+        if (tutorialPage == 0) {
+            // STRONA 1: WROGOWIE
+            struct TutEnemy { std::string tex; int cols; int rows; std::string name; std::string desc; };
+            std::vector<TutEnemy> enemies = {
+                {"goblin2.png", 3, 4, "Goblin", "Podstawowy wrog.\nPrzecietne zdrowie i predkosc.\nBrak specjalnych umiejetnosci."},
+                {"armor1.png", 3, 4, "Opancerzony", "Posiada gruby pancerz odbijajacy\nzwykle strzaly. Uzyj Armaty lub Pioruna!"},
+                {"masked.png", 3, 4, "Zamaskowany", "Niewidzialny dla zwyklych wiez.\nTylko Mag lub Radar moga go wykryc!"},
+                {"boss1.png", 3, 4, "Boss", "Ogromny i niezwykle powolny.\nPosiada gigantyczna ilosc punktow zycia!"},
+                {"fast1.png", 3, 4, "Szybki", "Maly i bardzo zwinny przeciwnik.\nWieza Lodowa z latwoscia go spowolni."},
+                {"tank1.png", 3, 4, "Tank", "Powolny gigant pochlaniajacy obrazenia.\nNiezwykle wrazliwy na trucizne!"}
+            };
+
+            for (size_t i = 0; i < enemies.size(); ++i) {
+                float xPos = (i % 2 == 0) ? 500.f : 1420.f;
+                // Bezpieczne uøycie static_cast zapobiega ostrzeøeniom C4244
+                float yOffset = static_cast<float>(static_cast<int>(i) / 2) * 220.f;
+                float yPos = 230.f + yOffset;
+
+                sf::Texture& t = TextureManager::getInstance().get(enemies[i].tex);
+                sf::Sprite spr(t);
+
+                sf::Vector2u tSize = t.getSize();
+                if (tSize.x > 0 && tSize.y > 0) {
+                    sf::Vector2i fSize(tSize.x / enemies[i].cols, tSize.y / enemies[i].rows);
+                    spr.setTextureRect(sf::IntRect(sf::Vector2i(0, 0), fSize));
+                    spr.setOrigin(sf::Vector2f(fSize.x / 2.f, fSize.y / 2.f));
+                    spr.setScale(sf::Vector2f(120.f / fSize.y, 120.f / fSize.y));
+                    spr.setPosition(sf::Vector2f(xPos - 200.f, yPos + 30.f));
+                    window.draw(spr);
+                }
+
+                sf::Text nText(font);
+                nText.setString(enemies[i].name + "\n" + enemies[i].desc);
+                nText.setCharacterSize(24);
+                nText.setFillColor(sf::Color::White);
+                nText.setPosition(sf::Vector2f(xPos - 100.f, yPos));
+                window.draw(nText);
+            }
+        }
+        else {
+            // STRONA 2: WIEØE
+            struct TutTower { std::string tex; std::string name; std::string desc; };
+            std::vector<TutTower> towers = {
+                {"tower_archer.png", "Wieza Lucznicza", "Tania i szybka. Dobra na poczatek,\nale slaba przeciwko pancerzom."},
+                {"tower_mage.png", "Wieza Maga", "Strzela magicznymi samonaprowadzajacymi\npociskami. Demaskuje wrogow!"},
+                {"tower_cannon.png", "Armata", "Wystrzeliwuje kule armatnie zadajace\nobrazenia obszarowe. Niszczy pancerze."},
+                {"tower_ice.png", "Wieza Lodowa", "Zadaje znikome obrazenia, ale\nznaczaco spowalnia przeciwnikow."},
+                {"tower_poison.png", "Wieza Trucizn", "Zatruwa wrogow, zadajac obrazenia\nw czasie. Zabojcza dla Tankow."},
+                {"tower_mine.png", "Kopalnia", "Nie atakuje. Generuje zloto co kilka\nsekund. Kazda kolejna wydobywa o 50% mniej."},
+                {"tower_radar.png", "Radar", "Nie atakuje. Zwieksza zasieg\nwiez obok i wykrywa zamaskowanych."},
+                {"tower_lightning.png", "Wieza Piorunow", "Razi piorunami do 3 wrogow naraz.\nBlyskawice niszcza pancerze!"}
+            };
+
+            for (size_t i = 0; i < towers.size(); ++i) {
+                float xPos = (i % 2 == 0) ? 500.f : 1420.f;
+                // Bezpieczne uøycie static_cast zapobiega ostrzeøeniom C4244
+                float yOffset = static_cast<float>(static_cast<int>(i) / 2) * 175.f;
+                float yPos = 200.f + yOffset;
+
+                sf::Texture& t = TextureManager::getInstance().get(towers[i].tex);
+                sf::Sprite spr(t);
+
+                sf::Vector2u tSize = t.getSize();
+                if (tSize.x > 0 && tSize.y > 0) {
+                    spr.setOrigin(sf::Vector2f(tSize.x / 2.f, tSize.y / 2.f));
+                    spr.setScale(sf::Vector2f(80.f / tSize.y, 80.f / tSize.y));
+                    spr.setPosition(sf::Vector2f(xPos - 200.f, yPos + 30.f));
+                    window.draw(spr);
+                }
+
+                sf::Text nText(font);
+                nText.setString(towers[i].name + "\n" + towers[i].desc);
+                nText.setCharacterSize(24);
+                nText.setFillColor(sf::Color::White);
+                nText.setPosition(sf::Vector2f(xPos - 100.f, yPos));
+                window.draw(nText);
+            }
+        }
+    }
     else if (currentState == GameState::GAME_OVER) {
         window.draw(backgroundSprite);
 
@@ -757,9 +1006,11 @@ void Game::render() {
         }
     }
     else if (currentState == GameState::GAMEPLAY || currentState == GameState::PAUSE) {
-        window.clear(availableMaps[currentMapIndex].bgColor);
+        // T£O KAFELKOWE B•Dè G£ADKI KOLOR:
+        window.clear(sf::Color::Black);
+        window.draw(availableMaps[currentMapIndex].bgShape);
 
-        // Rysowanie z≥πcz i segmentÛw nowej, grubej úcieøki
+        // Rysowanie z≥πcz i segmentÛw grubej úcieøki
         for (const auto& joint : availableMaps[currentMapIndex].pathJoints) {
             window.draw(joint);
         }
@@ -780,7 +1031,8 @@ void Game::render() {
         drawGameplayHUD();
 
         if (currentState == GameState::PAUSE) {
-            sf::RectangleShape overlay(sf::Vector2f(window.getSize().x, window.getSize().y));
+            // SZTYWNY ROZMIAR ZACIEMNIENIA EKRANU W OPARCIU O LOGICZNE 1920x1080
+            sf::RectangleShape overlay(sf::Vector2f(1920.f, 1080.f));
             overlay.setFillColor(sf::Color(0, 0, 0, 150));
             window.draw(overlay);
 

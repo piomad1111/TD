@@ -274,7 +274,7 @@ MaskedEnemy::MaskedEnemy(sf::Vector2f startPos) : Enemy(130.f, 60, 20, 5) {
     originalColor = sf::Color(255, 255, 255, 120);
     shape.setFillColor(originalColor);
 
-    sf::Texture& tex = TextureManager::getInstance().get("goblin2.png");
+    sf::Texture& tex = TextureManager::getInstance().get("masked.png");
     sprite.emplace(tex);
     sprite->setColor(originalColor); // Bêdzie pó³przezroczysty!
 
@@ -340,7 +340,7 @@ BossEnemy::BossEnemy(sf::Vector2f startPos) : Enemy(40.f, 1500, 200, 50) {
     originalColor = sf::Color::White;
     shape.setFillColor(originalColor);
 
-    sf::Texture& tex = TextureManager::getInstance().get("goblin2.png");
+    sf::Texture& tex = TextureManager::getInstance().get("boss1.png");
     sprite.emplace(tex);
     sprite->setColor(originalColor);
 

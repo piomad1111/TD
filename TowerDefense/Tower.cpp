@@ -176,29 +176,40 @@ MineTower::MineTower(sf::Vector2f pos)
 
 void MineTower::updateTower(float dt, const std::vector<std::unique_ptr<Enemy>>& enemies, std::vector<std::unique_ptr<Projectile>>& projectiles, PlayerStats& playerStats, const std::vector<std::unique_ptr<Tower>>& activeTowers) {
     // Zabezpieczenie przed nieskoñczonym farmieniem z³ota:
-    // Kopalnia "pracuje" i odlicza czas wydobycia TYLKO wtedy, gdy na mapie s¹ wrogowie (trwa fala).
+    // Kopalnia odlicza czas wydobycia TYLKO wtedy, gdy na mapie s¹ wrogowie (trwa fala).
     if (enemies.empty()) {
-        // Utrzymujemy tylko poprawny kolor tekstury (np. gasimy ¿ó³ty b³ysk), ale nie inkrementujemy timera wydobycia.
         if (timeSinceLastAttack > 0.1f) {
             shape.setOutlineColor(sf::Color::Black);
             if (sprite.has_value()) {
                 sprite->setColor(sf::Color::White);
             }
         }
-        return; // Zatrzymujemy postêp w tej klatce
+        return; // Przerywamy logikê kopalni w tej klatce
     }
 
-    // Standardowy przyrost czasu z klasy bazowej
     update(dt);
-
     if (timeSinceLastAttack >= attackCooldown) {
-        playerStats.gold += 25;
+        // Liczymy, która to jest kopalnia z kolei
+        int mineIndex = 0;
+        for (const auto& tower : activeTowers) {
+            if (dynamic_cast<MineTower*>(tower.get())) {
+                if (tower.get() == this) break;
+                mineIndex++;
+            }
+        }
+
+        // Bazowo 25 sztuk z³ota, dzielone na pó³ dla ka¿dej wczeœniejszej kopalni
+        int earnedGold = 25;
+        for (int i = 0; i < mineIndex; ++i) {
+            earnedGold /= 2;
+        }
+
+        // Gwarantujemy, ¿e kopalnia da absolutne minimum 1 sztukê z³ota
+        if (earnedGold < 1) earnedGold = 1;
+
+        playerStats.gold += earnedGold;
         timeSinceLastAttack = 0.f;
         shape.setOutlineColor(sf::Color::Yellow);
-
-        if (sprite.has_value()) {
-            sprite->setColor(sf::Color(255, 255, 150)); // Opcjonalny b³ysk równie¿ dla kopalni
-        }
     }
 }
 
