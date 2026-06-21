@@ -1,25 +1,20 @@
 ﻿  Game.cpp
-D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(724,89): warning C4244: "argument": konwersja z "T" do "T", możliwa utrata danych
-D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(724,89): warning C4244:         with
-D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(724,89): warning C4244:         [
-D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(724,89): warning C4244:             T=unsigned int
-D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(724,89): warning C4244:         ]
-D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(724,89): warning C4244:         and
-D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(724,89): warning C4244:         [
-D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(724,89): warning C4244:             T=float
-D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(724,89): warning C4244:         ]
-D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(724,69): warning C4244: "argument": konwersja z "T" do "T", możliwa utrata danych
-D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(724,69): warning C4244:         with
-D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(724,69): warning C4244:         [
-D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(724,69): warning C4244:             T=unsigned int
-D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(724,69): warning C4244:         ]
-D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(724,69): warning C4244:         and
-D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(724,69): warning C4244:         [
-D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(724,69): warning C4244:             T=float
-D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(724,69): warning C4244:         ]
-  MenuMenager.cpp
-  Tower.cpp
-  WaveManager.cpp
-  main.cpp
-  Generowanie kodu...
+D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(761,89): warning C4244: "argument": konwersja z "T" do "T", możliwa utrata danych
+D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(761,89): warning C4244:         with
+D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(761,89): warning C4244:         [
+D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(761,89): warning C4244:             T=unsigned int
+D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(761,89): warning C4244:         ]
+D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(761,89): warning C4244:         and
+D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(761,89): warning C4244:         [
+D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(761,89): warning C4244:             T=float
+D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(761,89): warning C4244:         ]
+D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(761,69): warning C4244: "argument": konwersja z "T" do "T", możliwa utrata danych
+D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(761,69): warning C4244:         with
+D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(761,69): warning C4244:         [
+D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(761,69): warning C4244:             T=unsigned int
+D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(761,69): warning C4244:         ]
+D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(761,69): warning C4244:         and
+D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(761,69): warning C4244:         [
+D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(761,69): warning C4244:             T=float
+D:\PROJEKT PK4\source\repos\TowerDefense\TowerDefense\Game.cpp(761,69): warning C4244:         ]
   TowerDefense.vcxproj -> D:\PROJEKT PK4\source\repos\TowerDefense\x64\Debug\TowerDefense.exe

@@ -1,5 +1,6 @@
 #include "Game.h"
 #include <regex>
+#include <cmath>
 
 Game::Game()
     : currentState(GameState::LOGIN), menuManager(font), backgroundSprite(backgroundTexture),
@@ -18,7 +19,6 @@ Game::Game()
     }
 
     initMaps();
-    pathLines.setPrimitiveType(sf::PrimitiveType::LineStrip);
 
     tytul.setString("TOWER DEFENSE");
     tytul.setCharacterSize(90);
@@ -45,66 +45,100 @@ Game::Game()
 }
 
 void Game::initMaps() {
-    // MAPA £ATWA
+    availableMaps.clear(); // Zabezpieczenie przed wielokrotnym wczytaniem
+
+    // Funkcja pomocnicza buduj¹ca grub¹ œcie¿kê z okr¹g³ymi ³¹czeniami na zakrêtach
+    auto buildThickPath = [](LevelMap& map) {
+        float pathThickness = 80.f; // Grubosc sciezki (jak na obrazkach referencyjnych)
+        for (size_t i = 0; i < map.path.size() - 1; ++i) {
+            sf::Vector2f p1 = map.path[i];
+            sf::Vector2f p2 = map.path[i + 1];
+            sf::Vector2f diff = p2 - p1;
+            float length = std::sqrt(diff.x * diff.x + diff.y * diff.y);
+
+            // Poprawka dla SFML 3: Bezpoœrednie pobranie radianów z atan2
+            float angleRads = std::atan2(diff.y, diff.x);
+
+            sf::RectangleShape segment({ length, pathThickness });
+            segment.setOrigin({ 0.f, pathThickness / 2.0f });
+            segment.setPosition(p1);
+            // Poprawka dla SFML 3: U¿ycie sf::radians zamiast rzutowania float do setRotation
+            segment.setRotation(sf::radians(angleRads));
+            segment.setFillColor(map.pathColor);
+            map.pathShapes.push_back(segment);
+
+            // Okr¹g³e z³¹cze (wyg³adza luki miêdzy prostok¹tami na zakrêtach)
+            sf::CircleShape joint(pathThickness / 2.0f);
+            joint.setOrigin({ pathThickness / 2.0f, pathThickness / 2.0f });
+            joint.setPosition(p1);
+            joint.setFillColor(map.pathColor);
+            map.pathJoints.push_back(joint);
+        }
+        // Zamkniêcie ostatniego punktu okrêgiem
+        if (!map.path.empty()) {
+            sf::CircleShape joint(pathThickness / 2.0f);
+            joint.setOrigin({ pathThickness / 2.0f, pathThickness / 2.0f });
+            joint.setPosition(map.path.back());
+            joint.setFillColor(map.pathColor);
+            map.pathJoints.push_back(joint);
+        }
+        };
+
+    // MAPA £ATWA - Trawiasta z br¹zow¹, poln¹ œcie¿k¹ (styl z pierwszego zdjêcia)
     LevelMap easy;
-    easy.name = "Latwa (10 fal) [+0.0x pkt]"; // Zaktualizowana nazwa
+    easy.name = "Latwa (10 fal) [+0.0x pkt]";
     easy.path = { {-50.f, 200.f}, {300.f, 200.f}, {300.f, 600.f}, {800.f, 600.f}, {800.f, 300.f}, {1600.f, 300.f} };
     easy.totalWaves = 10;
     easy.difficulty = 0;
-    easy.bgColor = sf::Color(34, 139, 34);
-    easy.pathColor = sf::Color(100, 100, 100, 150);
+    easy.bgColor = sf::Color(83, 148, 48); // Zielona trawa
+    easy.pathColor = sf::Color(168, 122, 81); // Br¹zowa ziemia
 
-    sf::RectangleShape obs1({ 200.f, 200.f });
-    obs1.setPosition({ 400.f, 300.f });
-    obs1.setFillColor(sf::Color(105, 105, 105));
-    obs1.setOutlineThickness(2.f);
-    obs1.setOutlineColor(sf::Color::Black);
+    sf::RectangleShape obs1({ 120.f, 90.f });
+    obs1.setPosition({ 450.f, 350.f });
+    obs1.setFillColor(sf::Color(100, 100, 100)); // Ska³a
+    obs1.setOutlineThickness(3.f);
+    obs1.setOutlineColor(sf::Color(60, 60, 60));
     easy.obstacles.push_back(obs1);
 
+    buildThickPath(easy);
     availableMaps.push_back(easy);
 
-    // MAPA ŒREDNIA
+    // MAPA ŒREDNIA - Jasna trawa z brukowan¹, szar¹ œcie¿k¹ (styl z drugiego zdjêcia)
     LevelMap medium;
-    medium.name = "Srednia (15 fal) [+0.5x pkt]"; // Zaktualizowana nazwa z mno¿nikiem
+    medium.name = "Srednia (15 fal) [+0.5x pkt]";
     medium.path = { {-50.f, 500.f}, {200.f, 500.f}, {200.f, 100.f}, {700.f, 100.f}, {700.f, 700.f}, {1200.f, 700.f}, {1200.f, 400.f}, {1600.f, 400.f} };
     medium.totalWaves = 15;
     medium.difficulty = 1;
-    medium.bgColor = sf::Color(139, 115, 85);
-    medium.pathColor = sf::Color(60, 40, 20, 150);
+    medium.bgColor = sf::Color(73, 186, 17); // Jaskrawa trawa
+    medium.pathColor = sf::Color(138, 142, 145); // Szary bruk
 
-    sf::RectangleShape obs2({ 400.f, 150.f });
-    obs2.setPosition({ 300.f, 300.f });
+    sf::RectangleShape obs2({ 200.f, 100.f });
+    obs2.setPosition({ 350.f, 250.f });
     obs2.setFillColor(sf::Color(80, 80, 80));
-    obs2.setOutlineThickness(2.f);
-    obs2.setOutlineColor(sf::Color::Black);
-
-    sf::RectangleShape obs3({ 200.f, 300.f });
-    obs3.setPosition({ 900.f, 200.f });
-    obs3.setFillColor(sf::Color(80, 80, 80));
-    obs3.setOutlineThickness(2.f);
-    obs3.setOutlineColor(sf::Color::Black);
-
+    obs2.setOutlineThickness(3.f);
+    obs2.setOutlineColor(sf::Color(50, 50, 50));
     medium.obstacles.push_back(obs2);
-    medium.obstacles.push_back(obs3);
 
+    buildThickPath(medium);
     availableMaps.push_back(medium);
 
-    // MAPA TRUDNA
+    // MAPA TRUDNA - Mroczna, wulkaniczna kraina
     LevelMap hard;
-    hard.name = "Trudna (20 fal) [+1.0x pkt]"; // Zaktualizowana nazwa z mno¿nikiem
+    hard.name = "Trudna (20 fal) [+1.0x pkt]";
     hard.path = { {800.f, -50.f}, {800.f, 300.f}, {200.f, 300.f}, {200.f, 800.f}, {1300.f, 800.f}, {1300.f, 150.f}, {1600.f, 150.f} };
     hard.totalWaves = 20;
     hard.difficulty = 2;
-    hard.bgColor = sf::Color(60, 60, 60);
-    hard.pathColor = sf::Color(200, 50, 0, 150);
+    hard.bgColor = sf::Color(40, 30, 30); // Mroczna ziemia
+    hard.pathColor = sf::Color(180, 50, 20); // Œcie¿ka z lawy
 
-    sf::RectangleShape obs4({ 600.f, 400.f });
-    obs4.setPosition({ 350.f, 350.f });
-    obs4.setFillColor(sf::Color(30, 30, 30));
-    obs4.setOutlineThickness(2.f);
-    obs4.setOutlineColor(sf::Color::Black);
+    sf::RectangleShape obs4({ 300.f, 200.f });
+    obs4.setPosition({ 400.f, 450.f });
+    obs4.setFillColor(sf::Color(20, 20, 20)); // Zwêglona ska³a
+    obs4.setOutlineThickness(3.f);
+    obs4.setOutlineColor(sf::Color(0, 0, 0));
     hard.obstacles.push_back(obs4);
 
+    buildThickPath(hard);
     availableMaps.push_back(hard);
 }
 
@@ -158,7 +192,7 @@ void Game::initGameplayHUD() {
         shopButtons.push_back(std::move(btn));
     }
 
-    ghostTower.setSize({ 40.f, 40.f });
+    ghostTower.setSize({ 50.f, 70.f });
     ghostTower.setOrigin({ 20.f, 20.f });
     ghostTower.setFillColor(sf::Color(255, 255, 255, 128));
 }
@@ -276,11 +310,6 @@ void Game::startGame(int mapIndex) {
     waveManager.reset();
     waveManager.setMapData(map.path, map.totalWaves, map.difficulty);
     autoWaveTimer = autoWaveDelay;
-
-    pathLines.clear();
-    for (const auto& point : map.path) {
-        pathLines.append(sf::Vertex(point, map.pathColor));
-    }
 
     changeState(GameState::GAMEPLAY);
     waveManager.loadWaveDataAsync();
@@ -415,7 +444,9 @@ bool Game::canPlaceTower(sf::Vector2f pos) {
         float t = std::max(0.0f, std::min(1.0f, proj / abLenSq));
         sf::Vector2f closest = a + ab * t;
         float distToPathSq = (pos.x - closest.x) * (pos.x - closest.x) + (pos.y - closest.y) * (pos.y - closest.y);
-        if (distToPathSq < 35.f * 35.f) return false;
+
+        // ZMIANA Z 35x35: Kolizja uwzglêdnia teraz grubsz¹ œcie¿kê (40px po³owa œcie¿ki + 20px promieñ wie¿y = 60px)
+        if (distToPathSq < 60.f * 60.f) return false;
     }
 
     sf::FloatRect towerBounds({ pos.x - 20.f, pos.y - 20.f }, { 40.f, 40.f });
@@ -706,11 +737,17 @@ void Game::render() {
     else if (currentState == GameState::GAMEPLAY || currentState == GameState::PAUSE) {
         window.clear(availableMaps[currentMapIndex].bgColor);
 
+        // Rysowanie z³¹cz i segmentów nowej, grubej œcie¿ki
+        for (const auto& joint : availableMaps[currentMapIndex].pathJoints) {
+            window.draw(joint);
+        }
+        for (const auto& shape : availableMaps[currentMapIndex].pathShapes) {
+            window.draw(shape);
+        }
+
         for (const auto& obs : availableMaps[currentMapIndex].obstacles) {
             window.draw(obs);
         }
-
-        window.draw(pathLines);
 
         waveManager.drawEnemies(window);
         for (const auto& tower : activeTowers) tower->draw(window);

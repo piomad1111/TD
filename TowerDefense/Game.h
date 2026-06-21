@@ -32,6 +32,10 @@ struct LevelMap {
     int difficulty = 0;
     sf::Color bgColor;
     sf::Color pathColor;
+
+    // NOWE: Wizualizacja grubej œcie¿ki
+    std::vector<sf::RectangleShape> pathShapes;
+    std::vector<sf::CircleShape> pathJoints;
 };
 
 struct ShopButton {

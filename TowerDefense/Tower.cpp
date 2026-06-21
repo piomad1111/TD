@@ -18,11 +18,11 @@ Tower::Tower(sf::Vector2f startPos, float tRange, float tCooldown, int tDamage, 
 
     // Rozmiar fizyczny (HITBOX) - decyduje o kolizjach, klikaniu i zajmowanym miejscu na mapie
     // Zmieñ tê wartoœæ, aby powiêkszyæ/pomniejszyæ hitbox wie¿y.
-    float hitboxSize = 180.f;
+    float hitboxSize = 200.f;
 
     // Rozmiar wizualny - docelowy rozmiar przeskalowanej tekstury na ekranie. 
     // Mo¿e byæ taki sam jak hitbox lub wiêkszy (np. 80.f), jeœli wie¿a ma byæ wy¿sza.
-    float visualSize = 100.f;
+    float visualSize = 80.f;
 
     // shape okreœla nasz hitbox i s³u¿y jako fallback gdy nie ma tekstury
     shape.setSize({ hitboxSize, hitboxSize });
