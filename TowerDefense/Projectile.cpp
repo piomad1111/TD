@@ -1,8 +1,8 @@
 #include "Projectile.h"
 #include <cmath>
 
-Projectile::Projectile(sf::Vector2f startPos, sf::Vector2f tPos, float spd, int dmg, float splash, sf::Color color, ProjectileEffect eff, DamageType dType)
-    : targetPos(tPos), speed(spd), damage(dmg), splashRadius(splash), reachedTarget(false), effect(eff), dmgType(dType)
+Projectile::Projectile(sf::Vector2f startPos, sf::Vector2f tPos, float spd, int dmg, float splash, sf::Color color, ProjectileEffect eff, DamageType dType, Enemy* homingTarget)
+    : targetPos(tPos), speed(spd), damage(dmg), splashRadius(splash), reachedTarget(false), effect(eff), dmgType(dType), homingTarget(homingTarget)
 {
     position = startPos;
 

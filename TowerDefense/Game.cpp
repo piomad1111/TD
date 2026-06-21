@@ -192,6 +192,7 @@ void Game::initGameplayHUD() {
         shopButtons.push_back(std::move(btn));
     }
 
+    // ZWIÊKSZONO ROZMIAR "DUCHA" WIE¯Y Z 40x40 NA 100x100
     ghostTower.setSize({ 50.f, 70.f });
     ghostTower.setOrigin({ 20.f, 20.f });
     ghostTower.setFillColor(sf::Color(255, 255, 255, 128));
@@ -449,7 +450,8 @@ bool Game::canPlaceTower(sf::Vector2f pos) {
         if (distToPathSq < 60.f * 60.f) return false;
     }
 
-    sf::FloatRect towerBounds({ pos.x - 20.f, pos.y - 20.f }, { 40.f, 40.f });
+    // DOSTOSOWANO KOLIZJÊ DO POWIÊKSZONEGO ROZMIARU "DUCHA" (100x100 zamiast 40x40)
+    sf::FloatRect towerBounds({ pos.x - 50.f, pos.y - 50.f }, { 100.f, 100.f });
     for (const auto& obs : availableMaps[currentMapIndex].obstacles) {
         if (obs.getGlobalBounds().findIntersection(towerBounds).has_value()) {
             return false;
@@ -507,6 +509,26 @@ void Game::update(float dt) {
         for (auto& tower : activeTowers) tower->updateTower(dt, waveManager.getEnemies(), activeProjectiles, playerStats, activeTowers);
 
         for (auto& proj : activeProjectiles) {
+
+            // --- NOWA LOGIKA SAMONAPROWADZANIA (DLA MAGA) ---
+            if (Enemy* target = proj->getHomingTarget()) {
+                // Najpierw upewniamy siê, czy wskaŸnik do wroga wci¹¿ jest wa¿ny i wróg ¿yje
+                bool isAlive = false;
+                for (const auto& e : waveManager.getEnemies()) {
+                    if (e.get() == target && !e->isDead()) {
+                        isAlive = true;
+                        break;
+                    }
+                }
+
+                if (isAlive) {
+                    proj->setTargetPos(target->getPosition()); // Korygowanie lotu za wrogiem
+                }
+                else {
+                    proj->clearHomingTarget(); // Wróg zgin¹³ - pocisk leci normalnie na ostatni¹ znan¹ pozycjê
+                }
+            }
+
             proj->update(dt);
             if (proj->hasReached()) {
                 float splash = proj->getSplashRadius();

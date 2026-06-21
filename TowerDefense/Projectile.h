@@ -18,8 +18,11 @@ private:
     ProjectileEffect effect;
     DamageType dmgType; // Typ obra  zadawanych przez pocisk
 
+    Enemy* homingTarget; // NOWE: WskaŸnik na cel dla samonaprowadzania
+
 public:
-    Projectile(sf::Vector2f startPos, sf::Vector2f tPos, float spd, int dmg, float splash, sf::Color color, ProjectileEffect eff = ProjectileEffect::NONE, DamageType dType = DamageType::NORMAL);
+    // ZMIANA: Dodano opcjonalny parametr homingTarget na koñcu konstruktora
+    Projectile(sf::Vector2f startPos, sf::Vector2f tPos, float spd, int dmg, float splash, sf::Color color, ProjectileEffect eff = ProjectileEffect::NONE, DamageType dType = DamageType::NORMAL, Enemy* homingTarget = nullptr);
 
     void update(float dt) override;
     void draw(sf::RenderWindow& window) override;
@@ -29,4 +32,9 @@ public:
     float getSplashRadius() const { return splashRadius; }
     ProjectileEffect getEffect() const { return effect; }
     DamageType getDamageType() const { return dmgType; }
+
+    // NOWE: Metody do obs³ugi samonaprowadzania w Game.cpp
+    Enemy* getHomingTarget() const { return homingTarget; }
+    void setTargetPos(sf::Vector2f pos) { targetPos = pos; }
+    void clearHomingTarget() { homingTarget = nullptr; }
 };

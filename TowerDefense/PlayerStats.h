@@ -36,6 +36,8 @@ public:
     // Opcja (Ulatwienie Interfejsu)
     bool autoWaveStart = false;
 
+    bool isWaveActive = false;
+
     void recalculateMultiplier() {
         // Podstawowy mno¿nik + nagroda za trudnoœæ mapy
         scoreMultiplier = 1.0f + mapDifficultyMultiplier;

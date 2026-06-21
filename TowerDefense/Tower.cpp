@@ -18,11 +18,11 @@ Tower::Tower(sf::Vector2f startPos, float tRange, float tCooldown, int tDamage, 
 
     // Rozmiar fizyczny (HITBOX) - decyduje o kolizjach, klikaniu i zajmowanym miejscu na mapie
     // Zmieñ tê wartoœæ, aby powiêkszyæ/pomniejszyæ hitbox wie¿y.
-    float hitboxSize = 200.f;
+    float hitboxSize = 180.f;
 
     // Rozmiar wizualny - docelowy rozmiar przeskalowanej tekstury na ekranie. 
     // Mo¿e byæ taki sam jak hitbox lub wiêkszy (np. 80.f), jeœli wie¿a ma byæ wy¿sza.
-    float visualSize = 80.f;
+    float visualSize = 100.f;
 
     // shape okreœla nasz hitbox i s³u¿y jako fallback gdy nie ma tekstury
     shape.setSize({ hitboxSize, hitboxSize });
@@ -59,7 +59,11 @@ Enemy* Tower::findTarget(const std::vector<std::unique_ptr<Enemy>>& enemies) {
     float currentTotalRange = range + bonusRange; // Uwzglêdnia bonus od radaru
 
     auto isValidTarget = [this, currentTotalRange](const std::unique_ptr<Enemy>& enemy) {
-        if (enemy->isDead() || !enemy->isTargetable()) return false;
+        if (enemy->isDead()) return false;
+
+        // ZMIANA: Magiczna wie¿a ignoruje maskowanie (widzi zamaskowanych wrogów!)
+        if (!enemy->isTargetable() && this->projDamageType != DamageType::MAGIC) return false;
+
         sf::Vector2f ePos = enemy->getPosition();
         float distSq = (ePos.x - position.x) * (ePos.x - position.x) + (ePos.y - position.y) * (ePos.y - position.y);
         return distSq <= (currentTotalRange * currentTotalRange);
@@ -92,7 +96,10 @@ void Tower::updateTower(float dt, const std::vector<std::unique_ptr<Enemy>>& ene
     if (timeSinceLastAttack >= attackCooldown) {
         Enemy* target = findTarget(enemies);
         if (target) {
-            projectiles.push_back(std::make_unique<Projectile>(position, target->getPosition(), projSpeed, damage, projSplashRadius, projColor, projEffect, projDamageType));
+            // Jeœli to pocisk Maga (MAGIC), ustawiamy wroga jako cel dla samonaprowadzania
+            Enemy* homingTarget = (projDamageType == DamageType::MAGIC) ? target : nullptr;
+
+            projectiles.push_back(std::make_unique<Projectile>(position, target->getPosition(), projSpeed, damage, projSplashRadius, projColor, projEffect, projDamageType, homingTarget));
             timeSinceLastAttack = 0.f;
             shape.setOutlineColor(sf::Color::Yellow);
 
@@ -168,11 +175,30 @@ MineTower::MineTower(sf::Vector2f pos)
 }
 
 void MineTower::updateTower(float dt, const std::vector<std::unique_ptr<Enemy>>& enemies, std::vector<std::unique_ptr<Projectile>>& projectiles, PlayerStats& playerStats, const std::vector<std::unique_ptr<Tower>>& activeTowers) {
+    // Zabezpieczenie przed nieskoñczonym farmieniem z³ota:
+    // Kopalnia "pracuje" i odlicza czas wydobycia TYLKO wtedy, gdy na mapie s¹ wrogowie (trwa fala).
+    if (enemies.empty()) {
+        // Utrzymujemy tylko poprawny kolor tekstury (np. gasimy ¿ó³ty b³ysk), ale nie inkrementujemy timera wydobycia.
+        if (timeSinceLastAttack > 0.1f) {
+            shape.setOutlineColor(sf::Color::Black);
+            if (sprite.has_value()) {
+                sprite->setColor(sf::Color::White);
+            }
+        }
+        return; // Zatrzymujemy postêp w tej klatce
+    }
+
+    // Standardowy przyrost czasu z klasy bazowej
     update(dt);
+
     if (timeSinceLastAttack >= attackCooldown) {
         playerStats.gold += 25;
         timeSinceLastAttack = 0.f;
         shape.setOutlineColor(sf::Color::Yellow);
+
+        if (sprite.has_value()) {
+            sprite->setColor(sf::Color(255, 255, 150)); // Opcjonalny b³ysk równie¿ dla kopalni
+        }
     }
 }
 
@@ -208,7 +234,7 @@ LightningTower::LightningTower(sf::Vector2f pos)
         1000.f, 0.f, sf::Color::Yellow, ProjectileEffect::NONE, DamageType::LIGHTNING,
         "tower_lightning.png") {
 }
- 
+
 void LightningTower::updateTower(float dt, const std::vector<std::unique_ptr<Enemy>>& enemies, std::vector<std::unique_ptr<Projectile>>& projectiles, PlayerStats& playerStats, const std::vector<std::unique_ptr<Tower>>& activeTowers) {
     update(dt);
 
